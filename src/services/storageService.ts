@@ -1,8 +1,14 @@
-const prefix = 'student-task-dashboard'
+const prefix = 'chalendar'
+const legacyPrefix = 'student-task-dashboard'
 
 export function readStorage<T>(key: string, fallback: T): T {
   try {
-    const raw = window.localStorage.getItem(`${prefix}:${key}`)
+    const storageKey = `${prefix}:${key}`
+    const legacyKey = `${legacyPrefix}:${key}`
+    const raw = window.localStorage.getItem(storageKey) ?? window.localStorage.getItem(legacyKey)
+    if (raw && !window.localStorage.getItem(storageKey)) {
+      window.localStorage.setItem(storageKey, raw)
+    }
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback

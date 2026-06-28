@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TaskList } from '../types/list'
 import type { Task, TaskDraft } from '../types/task'
-import { addDaysISO, todayISO } from '../utils/dates'
+import { addDaysISO, addToISODate, todayISO } from '../utils/dates'
 import { readStorage, writeStorage } from '../services/storageService'
+
+const FOREVER_RECURRENCE_WINDOW = 180
 
 function makeSeedTasks(lists: TaskList[]): Task[] {
   const byId = new Map(lists.map((list) => [list.id, list]))
@@ -79,12 +81,22 @@ export function useTasks(lists: TaskList[]) {
 
   const createTask = (draft: TaskDraft) => {
     const timestamp = new Date().toISOString()
-    setTasks((current) => [
-      {
+    const recurrenceId = draft.repeat.enabled ? crypto.randomUUID() : undefined
+    const total = draft.repeat.enabled
+      ? draft.repeat.forever
+        ? FOREVER_RECURRENCE_WINDOW
+        : Math.max(1, Math.min(draft.repeat.occurrences, 60))
+      : 1
+    const nextTasks = Array.from({ length: total }, (_, index): Task => {
+      const dueDate = index === 0
+        ? draft.dueDate
+        : addToISODate(draft.dueDate, draft.repeat.interval * index, draft.repeat.unit)
+
+      return {
         id: crypto.randomUUID(),
         title: draft.title.trim(),
         description: draft.description.trim(),
-        dueDate: draft.dueDate,
+        dueDate,
         dueTime: draft.dueTime,
         listId: draft.listId,
         color: listColors.get(draft.listId) ?? '#60a5fa',
@@ -92,11 +104,16 @@ export function useTasks(lists: TaskList[]) {
         priority: draft.priority,
         tags: draft.tags,
         source: 'manual',
+        recurrenceId,
+        recurrenceIndex: recurrenceId ? index + 1 : undefined,
+        recurrenceTotal: recurrenceId ? total : undefined,
+        recurrenceForever: recurrenceId ? draft.repeat.forever : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
-      },
-      ...current,
-    ])
+      }
+    })
+
+    setTasks((current) => [...nextTasks, ...current])
   }
 
   const updateTask = (id: string, draft: TaskDraft) => {
@@ -105,9 +122,13 @@ export function useTasks(lists: TaskList[]) {
         task.id === id
           ? {
               ...task,
-              ...draft,
               color: listColors.get(draft.listId) ?? task.color,
               description: draft.description.trim(),
+              dueDate: draft.dueDate,
+              dueTime: draft.dueTime,
+              listId: draft.listId,
+              priority: draft.priority,
+              tags: draft.tags,
               title: draft.title.trim(),
               updatedAt: new Date().toISOString(),
             }
@@ -130,5 +151,9 @@ export function useTasks(lists: TaskList[]) {
     setTasks((current) => current.filter((task) => task.id !== id))
   }
 
-  return { createTask, deleteTask, tasks, toggleTask, updateTask }
+  const deleteTaskSeries = (recurrenceId: string) => {
+    setTasks((current) => current.filter((task) => task.recurrenceId !== recurrenceId))
+  }
+
+  return { createTask, deleteTask, deleteTaskSeries, tasks, toggleTask, updateTask }
 }

@@ -2,6 +2,15 @@ export type TaskSource = 'manual' | 'canvas'
 export type TaskPriority = 'low' | 'medium' | 'high'
 export type AppView = 'calendar' | 'lists' | 'canvas'
 export type CalendarMode = 'month' | 'week' | 'agenda'
+export type RepeatUnit = 'day' | 'week' | 'month'
+
+export type TaskRepeat = {
+  enabled: boolean
+  interval: number
+  unit: RepeatUnit
+  occurrences: number
+  forever: boolean
+}
 
 export type Task = {
   id: string
@@ -17,6 +26,10 @@ export type Task = {
   source: TaskSource
   canvasId?: string
   canvasUrl?: string
+  recurrenceId?: string
+  recurrenceIndex?: number
+  recurrenceTotal?: number
+  recurrenceForever?: boolean
   reviewed?: boolean
   contextName?: string
   createdAt: string
@@ -31,6 +44,7 @@ export type TaskDraft = {
   listId: string
   priority: TaskPriority
   tags: string[]
+  repeat: TaskRepeat
 }
 
 export type TaskFilters = {

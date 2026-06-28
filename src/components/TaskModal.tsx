@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { TaskList } from '../types/list'
-import type { Task, TaskDraft, TaskPriority } from '../types/task'
+import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
+
+type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
 
 type TaskModalProps = {
   lists: TaskList[]
@@ -10,6 +12,7 @@ type TaskModalProps = {
   onClose: () => void
   onComplete: (task: Task) => void
   onDelete: (task: Task) => void
+  onDeleteSeries: (task: Task) => void
   onSave: (draft: TaskDraft) => void
 }
 
@@ -21,6 +24,45 @@ const emptyDraft: TaskDraft = {
   listId: '',
   priority: 'medium',
   tags: [],
+  repeat: {
+    enabled: false,
+    interval: 1,
+    unit: 'week',
+    occurrences: 8,
+    forever: false,
+  },
+}
+
+const repeatPresets: Record<RepeatPreset, Pick<TaskDraft['repeat'], 'enabled' | 'interval' | 'unit' | 'forever'>> = {
+  none: { enabled: false, interval: 1, unit: 'week', forever: false },
+  'three-days': { enabled: true, interval: 3, unit: 'day', forever: false },
+  weekly: { enabled: true, interval: 1, unit: 'week', forever: false },
+  biweekly: { enabled: true, interval: 2, unit: 'week', forever: false },
+  monthly: { enabled: true, interval: 1, unit: 'month', forever: false },
+  custom: { enabled: true, interval: 1, unit: 'week', forever: false },
+}
+
+const quickTimes = Array.from({ length: 32 }, (_, index) => {
+  const totalMinutes = 7 * 60 + index * 30
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+})
+
+function repeatPresetFromDraft(repeat: TaskDraft['repeat']): RepeatPreset {
+  if (!repeat.enabled) return 'none'
+  if (repeat.interval === 3 && repeat.unit === 'day') return 'three-days'
+  if (repeat.interval === 1 && repeat.unit === 'week') return 'weekly'
+  if (repeat.interval === 2 && repeat.unit === 'week') return 'biweekly'
+  if (repeat.interval === 1 && repeat.unit === 'month') return 'monthly'
+  return 'custom'
+}
+
+function formatTimeOption(time: string) {
+  const [rawHour, rawMinute] = time.split(':').map(Number)
+  const period = rawHour >= 12 ? 'p.m.' : 'a.m.'
+  const hour = rawHour % 12 || 12
+  return `${hour}:${String(rawMinute).padStart(2, '0')} ${period}`
 }
 
 export function TaskModal({
@@ -30,11 +72,13 @@ export function TaskModal({
   onClose,
   onComplete,
   onDelete,
+  onDeleteSeries,
   onSave,
 }: TaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(emptyDraft)
   const [tagText, setTagText] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
 
   useEffect(() => {
@@ -48,16 +92,28 @@ export function TaskModal({
             listId: task.listId,
             priority: task.priority,
             tags: task.tags,
+            repeat: emptyDraft.repeat,
           }
         : { ...emptyDraft, listId: lists[0]?.id ?? '' },
     )
     setTagText(task?.tags.join(', ') ?? '')
+    setShowTimePicker(false)
   }, [lists, task])
 
   const listName = lists.find((list) => list.id === task?.listId)?.name ?? task?.contextName ?? 'Canvas'
   const quickDate = (dueDate: string) => {
     setDraft((current) => ({ ...current, dueDate }))
     setShowDatePicker(false)
+  }
+  const repeatPreset = repeatPresetFromDraft(draft.repeat)
+  const changeRepeatPreset = (preset: RepeatPreset) => {
+    setDraft((current) => ({
+      ...current,
+      repeat: {
+        ...current.repeat,
+        ...repeatPresets[preset],
+      },
+    }))
   }
 
   return (
@@ -90,6 +146,17 @@ export function TaskModal({
                 <dt>Estado</dt>
                 <dd>{task.completed ? 'Completada' : 'Pendiente'}</dd>
               </div>
+              {task.recurrenceId ? (
+                <div>
+                  <dt>Repetición</dt>
+                  <dd>
+                    {task.recurrenceForever
+                      ? `Serie continua (${task.recurrenceIndex ?? 1})`
+                      : `${task.recurrenceIndex ?? 1} de ${task.recurrenceTotal ?? '?'}`
+                    }
+                  </dd>
+                </div>
+              ) : null}
             </dl>
             {task.canvasUrl ? (
               <a className="canvas-link" href={task.canvasUrl} rel="noreferrer" target="_blank">
@@ -103,6 +170,11 @@ export function TaskModal({
               <button className="danger-button" type="button" onClick={() => onDelete(task)}>
                 {task.source === 'canvas' ? 'Ocultar' : 'Eliminar'}
               </button>
+              {task.source === 'manual' && task.recurrenceId ? (
+                <button className="danger-outline-button" type="button" onClick={() => onDeleteSeries(task)}>
+                  Eliminar para siempre
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -185,11 +257,44 @@ export function TaskModal({
               </label>
               <label>
                 Hora
-                <input
-                  type="time"
-                  value={draft.dueTime}
-                  onChange={(event) => setDraft({ ...draft, dueTime: event.target.value })}
-                />
+                <div className="time-field">
+                  <input
+                    type="time"
+                    value={draft.dueTime}
+                    onChange={(event) => setDraft({ ...draft, dueTime: event.target.value })}
+                    onFocus={() => setShowTimePicker(true)}
+                    onClick={() => setShowTimePicker(true)}
+                  />
+                  {showTimePicker ? (
+                    <div className="time-shortcuts" aria-label="Horas rápidas">
+                      <button
+                        className={!draft.dueTime ? 'active' : ''}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setDraft({ ...draft, dueTime: '' })
+                          setShowTimePicker(false)
+                        }}
+                      >
+                        Sin hora
+                      </button>
+                      {quickTimes.map((time) => (
+                        <button
+                          className={draft.dueTime === time ? 'active' : ''}
+                          key={time}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setDraft({ ...draft, dueTime: time })
+                            setShowTimePicker(false)
+                          }}
+                        >
+                          {formatTimeOption(time)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </label>
             </div>
             <div className="form-grid">
@@ -228,6 +333,114 @@ export function TaskModal({
                 onChange={(event) => setTagText(event.target.value)}
               />
             </label>
+            <section className="repeat-panel" aria-label="Repetición de tarea">
+              <div className="repeat-heading">
+                <div>
+                  <span>Repetición</span>
+                  <p>
+                    {draft.repeat.enabled
+                      ? draft.repeat.forever
+                        ? 'Se mantendrá como serie continua.'
+                        : 'Se crearán varias tareas con fechas futuras.'
+                      : 'Una sola tarea.'
+                    }
+                  </p>
+                </div>
+                <select
+                  aria-label="Frecuencia de repetición"
+                  value={repeatPreset}
+                  onChange={(event) => changeRepeatPreset(event.target.value as RepeatPreset)}
+                >
+                  <option value="none">No repetir</option>
+                  <option value="three-days">Cada 3 días</option>
+                  <option value="weekly">Cada semana</option>
+                  <option value="biweekly">Cada 2 semanas</option>
+                  <option value="monthly">Cada mes</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+              {draft.repeat.enabled ? (
+                <div className="repeat-options">
+                  {repeatPreset === 'custom' ? (
+                    <>
+                      <label>
+                        Cada
+                        <input
+                          min={1}
+                          max={365}
+                          type="number"
+                          value={draft.repeat.interval}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              repeat: {
+                                ...draft.repeat,
+                                interval: Math.max(1, Number(event.target.value) || 1),
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Periodo
+                        <select
+                          value={draft.repeat.unit}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              repeat: {
+                                ...draft.repeat,
+                                unit: event.target.value as RepeatUnit,
+                              },
+                            })
+                          }
+                        >
+                          <option value="day">Días</option>
+                          <option value="week">Semanas</option>
+                          <option value="month">Meses</option>
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
+                  <label className="forever-toggle">
+                    <input
+                      checked={draft.repeat.forever}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          repeat: {
+                            ...draft.repeat,
+                            forever: event.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    <span>Repetir para siempre</span>
+                  </label>
+                  {!draft.repeat.forever ? (
+                    <label>
+                      Repeticiones
+                      <input
+                        min={2}
+                        max={60}
+                        type="number"
+                        value={draft.repeat.occurrences}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            repeat: {
+                              ...draft.repeat,
+                              occurrences: Math.max(2, Math.min(60, Number(event.target.value) || 2)),
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
             <div className="modal-actions">
               <button className="primary-button" type="submit">
                 Guardar

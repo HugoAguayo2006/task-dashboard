@@ -1,4 +1,4 @@
-# Task Campus
+# Chalendar
 
 Aplicación web en React + Vite para organizar tareas estudiantiles manuales y tareas/eventos de Canvas LMS en un dashboard personal.
 
@@ -43,4 +43,4 @@ La guia especifica para Canvas Tec y el mensaje para pedir el token estan en [`d
 - Filtros por lista, fuente, estado, prioridad, texto, vencidas y completadas.
 - Tareas de Canvas mezcladas con las manuales, con opción local para revisar u ocultar.
 - Diseño oscuro, responsivo y preparado para Vercel.
-# task-dashboard
+# chalendar

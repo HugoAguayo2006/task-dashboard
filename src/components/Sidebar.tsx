@@ -43,10 +43,9 @@ export function Sidebar({
     <>
       <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="brand-mark">T</div>
+          <img className="brand-mark" src="/favicon-96x96.png" alt="Chalendar" />
           <div>
-            <strong>Task Campus</strong>
-            <span>Canvas + agenda</span>
+            <strong>Chalendar</strong>
           </div>
           <button
             aria-label={collapsed ? 'Expandir menú' : 'Minimizar menú'}

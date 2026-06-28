@@ -78,6 +78,14 @@ function App() {
     setSelectedTask(null)
   }
 
+  const handleDeleteSeries = (task: Task) => {
+    if (!task.recurrenceId) return
+    tasksState.deleteTaskSeries(task.recurrenceId)
+    setSelectedTask(null)
+    setIsCreatingTask(false)
+    setEditingTask(null)
+  }
+
   const handleMoveTask = (task: Task, dueDate: string) => {
     if (task.source === 'canvas' || task.dueDate === dueDate) return
 
@@ -89,6 +97,13 @@ function App() {
       listId: task.listId,
       priority: task.priority,
       tags: task.tags,
+      repeat: {
+        enabled: false,
+        interval: 1,
+        unit: 'week',
+        occurrences: 1,
+        forever: false,
+      },
     })
   }
 
@@ -219,6 +234,7 @@ function App() {
           }}
           onComplete={handleComplete}
           onDelete={handleDelete}
+          onDeleteSeries={handleDeleteSeries}
           onSave={(payload) => {
             if (editingTask) {
               tasksState.updateTask(editingTask.id, payload)

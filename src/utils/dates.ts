@@ -17,6 +17,23 @@ export function addDaysISO(days: number) {
   return localISODate(date)
 }
 
+export function addToISODate(date: string, amount: number, unit: 'day' | 'week' | 'month') {
+  const next = new Date(`${date}T12:00:00`)
+  if (unit === 'day') {
+    next.setDate(next.getDate() + amount)
+  }
+  if (unit === 'week') {
+    next.setDate(next.getDate() + amount * 7)
+  }
+  if (unit === 'month') {
+    const originalDay = next.getDate()
+    next.setMonth(next.getMonth() + amount, 1)
+    const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+    next.setDate(Math.min(originalDay, lastDay))
+  }
+  return localISODate(next)
+}
+
 export function monthRange(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), 1)
   const end = new Date(date.getFullYear(), date.getMonth() + 1, 0)
