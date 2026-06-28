@@ -59,5 +59,10 @@ export function useLists() {
     })
   }
 
-  return { createList, deleteList, lists, reorderLists, updateList }
+  const replaceLists = (nextLists: TaskList[]) => {
+    if (!nextLists.length) return
+    setLists(nextLists)
+  }
+
+  return { createList, deleteList, lists, reorderLists, replaceLists, updateList }
 }

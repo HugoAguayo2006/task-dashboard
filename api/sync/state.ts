@@ -1,0 +1,120 @@
+type VercelRequest = {
+  method?: string
+  body?: unknown
+}
+
+type VercelResponse = {
+  status: (code: number) => VercelResponse
+  json: (body: unknown) => void
+}
+
+type SyncState = {
+  lists: unknown[]
+  tasks: unknown[]
+  updatedAt: string
+}
+
+function isSyncState(value: unknown): value is SyncState {
+  if (!value || typeof value !== 'object') return false
+  const state = value as Partial<SyncState>
+  return Array.isArray(state.lists) && Array.isArray(state.tasks) && typeof state.updatedAt === 'string'
+}
+
+function config() {
+  const supabaseUrl = process.env.SUPABASE_URL?.trim()
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const syncId = process.env.CHALENDAR_SYNC_ID?.trim() || 'default'
+
+  if (!supabaseUrl || !serviceRoleKey) return null
+  return { serviceRoleKey, supabaseUrl, syncId }
+}
+
+async function readBody(request: VercelRequest) {
+  if (typeof request.body === 'string') {
+    return JSON.parse(request.body) as unknown
+  }
+  return request.body
+}
+
+export default async function handler(request: VercelRequest, response: VercelResponse) {
+  const syncConfig = config()
+  if (!syncConfig) {
+    response.status(404).json({
+      code: 'sync-disabled',
+      error: 'Configura SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY para activar la sincronización.',
+    })
+    return
+  }
+
+  const endpoint = new URL('/rest/v1/chalendar_state', syncConfig.supabaseUrl)
+  const headers = {
+    apikey: syncConfig.serviceRoleKey,
+    Authorization: `Bearer ${syncConfig.serviceRoleKey}`,
+    'Content-Type': 'application/json',
+  }
+
+  if (request.method === 'GET') {
+    endpoint.searchParams.set('id', `eq.${syncConfig.syncId}`)
+    endpoint.searchParams.set('select', 'data,updated_at')
+
+    const supabaseResponse = await fetch(endpoint, { headers })
+    const payload = (await supabaseResponse.json().catch(() => [])) as Array<{
+      data?: SyncState
+      updated_at?: string
+    }>
+
+    if (!supabaseResponse.ok) {
+      response.status(supabaseResponse.status).json({
+        code: 'sync-error',
+        error: 'No se pudo leer Supabase.',
+        detail: payload,
+      })
+      return
+    }
+
+    response.status(200).json({ state: payload[0]?.data ?? null })
+    return
+  }
+
+  if (request.method === 'PUT') {
+    const body = (await readBody(request)) as { state?: unknown } | undefined
+    if (!isSyncState(body?.state)) {
+      response.status(400).json({
+        code: 'invalid-state',
+        error: 'El estado de sincronización no tiene el formato esperado.',
+      })
+      return
+    }
+
+    const supabaseResponse = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        id: syncConfig.syncId,
+        data: body.state,
+        updated_at: body.state.updatedAt,
+      }),
+    })
+
+    const payload = await supabaseResponse.text()
+    if (!supabaseResponse.ok) {
+      response.status(supabaseResponse.status).json({
+        code: 'sync-error',
+        error: 'No se pudo guardar en Supabase.',
+        detail: payload,
+      })
+      return
+    }
+
+    response.status(200).json({ ok: true })
+    return
+  }
+
+  response.status(405).json({
+    code: 'method-not-allowed',
+    error: 'Usa GET o PUT.',
+  })
+}

@@ -269,6 +269,7 @@
 }
 
 .canvas-status,
+.sync-status,
 .filters-bar,
 .summary-grid > div,
 .list-summary,
@@ -284,7 +285,8 @@
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
 }
 
-.canvas-status {
+.canvas-status,
+.sync-status {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -293,19 +295,30 @@
 }
 
 .canvas-status button,
+.sync-status button,
 .canvas-page > button {
   border-color: rgba(148, 163, 184, 0.24);
   border-radius: 8px;
   padding: 8px 11px;
 }
 
-.status-ready {
+.status-ready,
+.status-synced {
   color: #bbf7d0;
 }
 
 .status-error,
 .status-missing-token {
   color: #fecaca;
+}
+
+.status-saving,
+.status-loading {
+  color: #bfdbfe;
+}
+
+.status-local {
+  color: #fde68a;
 }
 
 .filters-bar {
@@ -1694,6 +1707,7 @@
 
 @media (max-width: 520px) {
   .canvas-status,
+  .sync-status,
   .topbar {
     flex-direction: column;
   }
@@ -1708,6 +1722,7 @@
   .filters-bar select,
   .segmented-control,
   .canvas-status button,
+  .sync-status button,
   .topbar .primary-button {
     width: 100%;
   }

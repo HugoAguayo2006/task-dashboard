@@ -15,6 +15,26 @@ Para probar tambien la funcion serverless de Canvas en local:
 npm run dev:vercel
 ```
 
+## Persistencia cloud
+
+Chalendar guarda una copia local en `localStorage` y, si configuras Supabase, sincroniza listas y tareas con la nube usando una función serverless:
+
+```text
+/api/sync/state
+```
+
+1. Crea un proyecto en Supabase.
+2. En el SQL Editor, ejecuta [`docs/supabase-schema.sql`](docs/supabase-schema.sql).
+3. Configura estas variables privadas en Vercel:
+
+```bash
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+CHALENDAR_SYNC_ID=default
+```
+
+No pongas `SUPABASE_SERVICE_ROLE_KEY` como `VITE_*`. Esa llave solo debe vivir en el servidor.
+
 ## Canvas LMS
 
 La app usa una función serverless compatible con Vercel:
@@ -43,4 +63,3 @@ La guia especifica para Canvas Tec y el mensaje para pedir el token estan en [`d
 - Filtros por lista, fuente, estado, prioridad, texto, vencidas y completadas.
 - Tareas de Canvas mezcladas con las manuales, con opción local para revisar u ocultar.
 - Diseño oscuro, responsivo y preparado para Vercel.
-# chalendar

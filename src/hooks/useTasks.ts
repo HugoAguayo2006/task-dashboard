@@ -155,5 +155,9 @@ export function useTasks(lists: TaskList[]) {
     setTasks((current) => current.filter((task) => task.recurrenceId !== recurrenceId))
   }
 
-  return { createTask, deleteTask, deleteTaskSeries, tasks, toggleTask, updateTask }
+  const replaceTasks = (nextTasks: Task[]) => {
+    setTasks(nextTasks)
+  }
+
+  return { createTask, deleteTask, deleteTaskSeries, replaceTasks, tasks, toggleTask, updateTask }
 }

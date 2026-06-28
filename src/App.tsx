@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
 import { FiltersBar } from './components/FiltersBar'
 import { Sidebar } from './components/Sidebar'
+import { SyncStatusBar } from './components/SyncStatusBar'
 import { TaskModal } from './components/TaskModal'
 import { CalendarPage } from './pages/CalendarPage'
 import { CanvasPage } from './pages/CanvasPage'
@@ -10,6 +11,8 @@ import { Dashboard } from './pages/Dashboard'
 import { useCanvasTasks } from './hooks/useCanvasTasks'
 import { useLists } from './hooks/useLists'
 import { useTasks } from './hooks/useTasks'
+import { fetchSyncState, saveSyncState } from './services/syncApi'
+import type { SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters } from './types/task'
 import { filterTasks, sortTasksByDueDate } from './utils/dates'
 
@@ -30,10 +33,84 @@ function App() {
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
+  const syncReady = useRef(false)
+  const syncDisabled = useRef(false)
+  const didLoadCloudState = useRef(false)
+  const lastSavedCloudState = useRef('')
 
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
   const canvasState = useCanvasTasks()
+
+  const loadCloudState = async () => {
+    setSyncStatus('loading')
+    syncReady.current = false
+    try {
+      const result = await fetchSyncState()
+      if (result.disabled) {
+        syncDisabled.current = true
+        setSyncStatus('local')
+        syncReady.current = true
+        return
+      }
+
+      syncDisabled.current = false
+      if (result.state) {
+        listsState.replaceLists(result.state.lists)
+        tasksState.replaceTasks(result.state.tasks)
+        lastSavedCloudState.current = JSON.stringify(result.state)
+      } else {
+        const state = {
+          lists: listsState.lists,
+          tasks: tasksState.tasks,
+          updatedAt: new Date().toISOString(),
+        }
+        await saveSyncState(state)
+        lastSavedCloudState.current = JSON.stringify(state)
+      }
+      setSyncStatus('synced')
+      syncReady.current = true
+    } catch {
+      setSyncStatus('error')
+      syncReady.current = true
+    }
+  }
+
+  useEffect(() => {
+    if (didLoadCloudState.current) return
+    didLoadCloudState.current = true
+    loadCloudState()
+  })
+
+  useEffect(() => {
+    if (!syncReady.current || syncDisabled.current) return
+
+    const state = {
+      lists: listsState.lists,
+      tasks: tasksState.tasks,
+      updatedAt: new Date().toISOString(),
+    }
+    const serialized = JSON.stringify(state)
+    if (serialized === lastSavedCloudState.current) return
+
+    setSyncStatus('saving')
+    const timeout = window.setTimeout(() => {
+      saveSyncState(state)
+        .then((result) => {
+          if (result.disabled) {
+            syncDisabled.current = true
+            setSyncStatus('local')
+            return
+          }
+          lastSavedCloudState.current = serialized
+          setSyncStatus('synced')
+        })
+        .catch(() => setSyncStatus('error'))
+    }, 900)
+
+    return () => window.clearTimeout(timeout)
+  }, [listsState.lists, tasksState.tasks])
 
   const allTasks = useMemo(
     () => [...tasksState.tasks, ...canvasState.tasks],
@@ -170,6 +247,7 @@ function App() {
         </header>
 
         <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
+        <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
 
         <FiltersBar
           calendarMode={calendarMode}
