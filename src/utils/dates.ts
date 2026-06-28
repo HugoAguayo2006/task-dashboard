@@ -53,6 +53,7 @@ export function formatDateLabel(date: string) {
 }
 
 export function formatLongDate(date: string) {
+  if (!date) return 'Sin fecha'
   return new Intl.DateTimeFormat('es-MX', {
     weekday: 'long',
     day: 'numeric',
@@ -61,7 +62,7 @@ export function formatLongDate(date: string) {
 }
 
 export function isOverdue(task: Task) {
-  if (task.completed) return false
+  if (task.completed || !task.dueDate) return false
   const now = new Date()
   const dueTime = task.dueTime || '23:59'
   const dueDate = new Date(`${task.dueDate}T${dueTime}:59`)
@@ -130,8 +131,9 @@ export function toISODate(date: Date) {
 }
 
 export function monthTitle(date: Date) {
-  return new Intl.DateTimeFormat('es-MX', {
+  const title = new Intl.DateTimeFormat('es-MX', {
     month: 'long',
     year: 'numeric',
   }).format(date)
+  return title.charAt(0).toUpperCase() + title.slice(1)
 }

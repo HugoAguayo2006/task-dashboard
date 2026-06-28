@@ -39,8 +39,9 @@ export function CalendarView({
   const [expandedDay, setExpandedDay] = useState<{ date: string; tasks: Task[] } | null>(null)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [dropDate, setDropDate] = useState<string | null>(null)
+  const [visibleDate, setVisibleDate] = useState(() => new Date())
   const sortedTasks = sortCalendarTasks(tasks)
-  const overdueTasks = sortedTasks.filter((task) => !task.completed && task.dueDate < todayISO())
+  const overdueTasks = sortedTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < todayISO())
 
   const dropTaskOnDate = (date: string) => {
     if (!draggedTask) return
@@ -75,26 +76,48 @@ export function CalendarView({
     )
   }
 
-  const days = mode === 'week' ? buildWeekDays() : buildMonthDays().days
-  const currentMonth = new Date().getMonth()
+  const days = mode === 'week' ? buildWeekDays(visibleDate) : buildMonthDays(visibleDate).days
+  const currentMonth = visibleDate.getMonth()
+  const movePeriod = (offset: number) => {
+    setExpandedDay(null)
+    setVisibleDate((current) => {
+      if (mode === 'week') {
+        const next = new Date(current)
+        next.setDate(next.getDate() + offset * 7)
+        return next
+      }
+      return new Date(current.getFullYear(), current.getMonth() + offset, 1)
+    })
+  }
+  const title = mode === 'week' ? 'Semana' : monthTitle(visibleDate)
 
   return (
     <>
       <OverdueNotice tasks={overdueTasks} onComplete={onComplete} onOpenTask={onOpenTask} />
       <section className={`calendar-grid ${mode === 'week' ? 'week-mode' : ''}`}>
         <div className="calendar-title">
-          <h2>{mode === 'week' ? 'Esta semana' : monthTitle(new Date())}</h2>
+          <button aria-label="Periodo anterior" type="button" onClick={() => movePeriod(-1)}>
+            ‹
+          </button>
+          <h2>{title}</h2>
+          <button aria-label="Periodo siguiente" type="button" onClick={() => movePeriod(1)}>
+            ›
+          </button>
         </div>
         {weekLabels.map((label) => (
           <div className="weekday" key={label}>
             {label}
           </div>
         ))}
-        {days.map((day) => {
+        {days.map((day, index) => {
           const iso = toISODate(day)
           const dayTasks = sortCalendarTasks(tasks.filter((task) => task.dueDate === iso))
           const muted = mode === 'month' && day.getMonth() !== currentMonth
           const isToday = iso === todayISO()
+          const column = index % 7
+          const row = Math.floor(index / 7)
+          const popoverPosition = column <= 1 ? 'start' : column >= 5 ? 'end' : 'center'
+          const popoverVerticalPosition = mode === 'month' && row >= 3 ? 'up' : 'down'
           return (
             <div
               className={`calendar-day ${muted ? 'muted' : ''} ${isToday ? 'today' : ''} ${
@@ -140,6 +163,8 @@ export function CalendarView({
               {expandedDay?.date === iso ? (
                 <DayTasksPopover
                   date={expandedDay.date}
+                  position={popoverPosition}
+                  verticalPosition={popoverVerticalPosition}
                   tasks={expandedDay.tasks}
                   onClose={() => setExpandedDay(null)}
                   onComplete={onComplete}
@@ -258,6 +283,8 @@ function OverdueNotice({
 
 type DayTasksPopoverProps = {
   date: string
+  position: 'start' | 'center' | 'end'
+  verticalPosition: 'down' | 'up'
   tasks: Task[]
   onClose: () => void
   onComplete: (task: Task) => void
@@ -269,6 +296,8 @@ type DayTasksPopoverProps = {
 
 function DayTasksPopover({
   date,
+  position,
+  verticalPosition,
   tasks,
   onClose,
   onComplete,
@@ -284,7 +313,11 @@ function DayTasksPopover({
     .toUpperCase()
 
   return (
-    <section className="day-popover" role="dialog" aria-label="Tareas del día">
+    <section
+      className={`day-popover is-${position} opens-${verticalPosition}`}
+      role="dialog"
+      aria-label="Tareas del día"
+    >
       <button aria-label="Cerrar día" className="day-popover-close" type="button" onClick={onClose}>
         ×
       </button>
@@ -304,12 +337,12 @@ function DayTasksPopover({
           <CalendarTaskRow
             key={task.id}
             task={task}
-              variant="day-modal"
-              onComplete={onComplete}
-              onDragEnd={onDragEnd}
-              onDragStart={onDragStart}
-              onOpenTask={onOpenTask}
-            />
+            variant="day-modal"
+            onComplete={onComplete}
+            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            onOpenTask={onOpenTask}
+          />
         ))}
       </div>
     </section>

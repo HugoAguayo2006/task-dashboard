@@ -134,7 +134,7 @@ export function TaskModal({
               <div>
                 <dt>Fecha</dt>
                 <dd>
-                  {formatLongDate(task.dueDate)}
+                  {task.dueDate ? formatLongDate(task.dueDate) : 'Sin fecha'}
                   {task.dueTime ? `, ${task.dueTime}` : ''}
                 </dd>
               </div>
@@ -217,7 +217,6 @@ export function TaskModal({
                 Fecha
                 <div className="date-field">
                   <input
-                    required
                     type="date"
                     value={draft.dueDate}
                     onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}

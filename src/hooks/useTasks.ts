@@ -1,66 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TaskList } from '../types/list'
 import type { Task, TaskDraft } from '../types/task'
-import { addDaysISO, addToISODate, todayISO } from '../utils/dates'
+import { makeInitialTasks } from '../data/initialWorkspace'
+import { addToISODate } from '../utils/dates'
 import { readStorage, writeStorage } from '../services/storageService'
 
 const FOREVER_RECURRENCE_WINDOW = 180
 
-function makeSeedTasks(lists: TaskList[]): Task[] {
-  const byId = new Map(lists.map((list) => [list.id, list]))
-  const now = new Date().toISOString()
-  return [
-    {
-      id: crypto.randomUUID(),
-      title: 'Preparar entregables de la semana',
-      description: 'Ordenar pendientes y priorizar lo que vence primero.',
-      dueDate: todayISO(),
-      dueTime: '18:00',
-      listId: 'tec',
-      color: byId.get('tec')?.color ?? '#60a5fa',
-      completed: false,
-      priority: 'high',
-      tags: ['planeación'],
-      source: 'manual',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      title: 'Repasar ejercicios de álgebra',
-      description: '',
-      dueDate: addDaysISO(1),
-      dueTime: '20:30',
-      listId: 'matematicas',
-      color: byId.get('matematicas')?.color ?? '#34d399',
-      completed: false,
-      priority: 'medium',
-      tags: ['repaso'],
-      source: 'manual',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      title: 'Definir calendario del proyecto',
-      description: 'Bloquear fechas de avance y revisión.',
-      dueDate: addDaysISO(4),
-      dueTime: '',
-      listId: 'proyecto-personal',
-      color: byId.get('proyecto-personal')?.color ?? '#f87171',
-      completed: false,
-      priority: 'low',
-      tags: ['roadmap'],
-      source: 'manual',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]
-}
-
 export function useTasks(lists: TaskList[]) {
   const [tasks, setTasks] = useState<Task[]>(() =>
-    readStorage('tasks', makeSeedTasks(lists)),
+    readStorage('tasks', makeInitialTasks()),
   )
 
   const listColors = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
@@ -68,6 +17,18 @@ export function useTasks(lists: TaskList[]) {
   useEffect(() => {
     writeStorage('tasks', tasks)
   }, [tasks])
+
+  useEffect(() => {
+    setTasks((current) => {
+      const taskKeys = new Set(
+        current.map((task) => `${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
+      )
+      const missingTasks = makeInitialTasks().filter(
+        (task) => !taskKeys.has(`${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
+      )
+      return missingTasks.length ? [...missingTasks, ...current] : current
+    })
+  }, [])
 
   useEffect(() => {
     setTasks((current) =>
@@ -83,7 +44,9 @@ export function useTasks(lists: TaskList[]) {
     const timestamp = new Date().toISOString()
     const recurrenceId = draft.repeat.enabled ? crypto.randomUUID() : undefined
     const total = draft.repeat.enabled
-      ? draft.repeat.forever
+      ? !draft.dueDate
+        ? 1
+        : draft.repeat.forever
         ? FOREVER_RECURRENCE_WINDOW
         : Math.max(1, Math.min(draft.repeat.occurrences, 60))
       : 1

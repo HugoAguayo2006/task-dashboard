@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { TaskList } from '../types/list'
-import { palette } from '../utils/colors'
+import { initialLists } from '../data/initialWorkspace'
 import { readStorage, writeStorage } from '../services/storageService'
-
-const now = new Date().toISOString()
-
-const initialLists: TaskList[] = [
-  { id: 'tec', name: 'Tec', color: palette[0], createdAt: now },
-  { id: 'matematicas', name: 'Matemáticas', color: palette[1], createdAt: now },
-  { id: 'canvas', name: 'Canvas', color: palette[2], createdAt: now },
-  { id: 'proyecto-personal', name: 'Proyecto personal', color: palette[3], createdAt: now },
-  { id: 'examenes', name: 'Exámenes', color: palette[4], createdAt: now },
-]
 
 export function useLists() {
   const [lists, setLists] = useState<TaskList[]>(() => readStorage('lists', initialLists))
+
+  useEffect(() => {
+    setLists((current) => {
+      const currentIds = new Set(current.map((list) => list.id))
+      const missingLists = initialLists.filter((list) => !currentIds.has(list.id))
+      return missingLists.length ? [...current, ...missingLists] : current
+    })
+  }, [])
 
   useEffect(() => {
     writeStorage('lists', lists)
