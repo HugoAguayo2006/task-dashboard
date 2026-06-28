@@ -91,7 +91,6 @@ export function Sidebar({
             tasks={tasks}
             onCreate={onCreateList}
             onDelete={onDeleteList}
-            onSelect={onSelectList}
             onUpdate={onUpdateList}
           />
         ) : (

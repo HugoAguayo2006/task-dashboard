@@ -12,8 +12,8 @@ function first(value: string | string[] | undefined) {
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
-  const baseUrl = process.env.CANVAS_BASE_URL
-  const accessToken = process.env.CANVAS_ACCESS_TOKEN
+  const baseUrl = process.env.CANVAS_BASE_URL?.trim()
+  const accessToken = process.env.CANVAS_ACCESS_TOKEN?.trim()
 
   if (!baseUrl || !accessToken) {
     response.status(400).json({
@@ -24,6 +24,14 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
 
   const type = first(request.query.type) ?? 'assignment'
+  if (type !== 'assignment' && type !== 'event') {
+    response.status(400).json({
+      code: 'invalid-type',
+      error: 'El tipo de calendario debe ser assignment o event.',
+    })
+    return
+  }
+
   const startDate = first(request.query.start_date)
   const endDate = first(request.query.end_date)
   const canvasUrl = new URL('/api/v1/calendar_events', baseUrl)

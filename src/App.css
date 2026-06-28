@@ -47,28 +47,25 @@
 }
 
 .collapse-button {
-  position: absolute;
-  z-index: 10;
-  top: 22px;
-  right: -18px;
   display: grid;
-  width: 42px;
-  height: 42px;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
   place-items: center;
-  margin-left: 0;
-  border: 1px solid rgba(147, 197, 253, 0.38) !important;
-  border-radius: 999px !important;
-  color: #07111f !important;
-  background: #93c5fd !important;
-  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.28);
-  font-size: 30px;
+  margin-left: auto;
+  border: 1px solid rgba(147, 197, 253, 0.42) !important;
+  border-radius: 8px !important;
+  color: #bfdbfe !important;
+  background: rgba(96, 165, 250, 0.14) !important;
+  box-shadow: none;
+  font-size: 25px;
   font-weight: 900;
   line-height: 1;
 }
 
 .collapse-button:hover {
-  background: #bfdbfe !important;
-  transform: translateX(1px);
+  color: #07111f !important;
+  background: #93c5fd !important;
 }
 
 .sidebar-header strong {
@@ -176,7 +173,10 @@
 }
 
 .sidebar.is-collapsed .sidebar-header {
-  justify-content: center;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .sidebar.is-collapsed .sidebar-header > div:not(.brand-mark),
@@ -186,11 +186,13 @@
 }
 
 .sidebar.is-collapsed .collapse-button {
-  top: 22px;
-  right: -20px;
-  width: 46px;
-  height: 46px;
-  font-size: 34px;
+  width: 48px;
+  height: 48px;
+  margin-left: 0;
+  border-color: rgba(147, 197, 253, 0.52) !important;
+  color: #07111f !important;
+  background: #93c5fd !important;
+  font-size: 31px;
 }
 
 .sidebar.is-collapsed .create-button,

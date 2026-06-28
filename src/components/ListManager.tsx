@@ -8,7 +8,6 @@ type ListManagerProps = {
   tasks?: Task[]
   onCreate: (name: string, color: string) => void
   onDelete: (id: string) => void
-  onSelect?: (id: string) => void
   onUpdate: (id: string, updates: Pick<TaskList, 'name' | 'color'>) => void
 }
 
@@ -17,7 +16,6 @@ export function ListManager({
   tasks = [],
   onCreate,
   onDelete,
-  onSelect,
   onUpdate,
 }: ListManagerProps) {
   const [name, setName] = useState('')
@@ -67,7 +65,6 @@ export function ListManager({
             <input
               aria-label={`Nombre de ${list.name}`}
               value={list.name}
-              onFocus={() => onSelect?.(list.id)}
               onChange={(event) =>
                 onUpdate(list.id, { name: event.target.value, color: list.color })
               }

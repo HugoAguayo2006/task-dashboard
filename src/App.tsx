@@ -108,7 +108,6 @@ function App() {
         onDeleteList={listsState.deleteList}
         onSelectList={(listId) => {
           setFilters((current) => ({ ...current, listId }))
-          setView('lists')
           setSidebarOpen(false)
         }}
         onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
