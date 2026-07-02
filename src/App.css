@@ -1,7 +1,97 @@
 .app-shell {
+  --app-bg:
+    linear-gradient(135deg, rgba(74, 222, 128, 0.08), transparent 34%),
+    linear-gradient(315deg, rgba(96, 165, 250, 0.08), transparent 36%),
+    #0c1017;
+  --sidebar-bg: rgba(9, 13, 20, 0.84);
+  --surface: rgba(15, 23, 42, 0.78);
+  --surface-strong: #0f172a;
+  --surface-solid: #111827;
+  --surface-muted: rgba(2, 6, 23, 0.34);
+  --surface-muted-strong: rgba(2, 6, 23, 0.58);
+  --card-bg: rgba(2, 6, 23, 0.42);
+  --card-completed-bg: rgba(2, 6, 23, 0.24);
+  --control-bg: rgba(2, 6, 23, 0.35);
+  --control-hover: rgba(148, 163, 184, 0.12);
+  --text: #e5edf7;
+  --text-strong: #f8fafc;
+  --text-soft: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --border: rgba(148, 163, 184, 0.16);
+  --border-soft: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.24);
+  --accent: #93c5fd;
+  --accent-strong: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.14);
+  --accent-text: #07111f;
+  --button-text: #08111f;
+  --button-bg: #e2e8f0;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  --modal-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  --backdrop: rgba(2, 6, 23, 0.9);
+  --scrim: rgba(2, 6, 23, 0.58);
+  --danger-text: #fca5a5;
+  --success-text: #bbf7d0;
+  --error-text: #fecaca;
+  --info-text: #bfdbfe;
+  --warning-text: #fde68a;
+  --overdue-border: rgba(251, 191, 36, 0.24);
+  --overdue-bg: rgba(120, 53, 15, 0.18);
+  --overdue-heading: #fef3c7;
+  --overdue-copy: #fcd34d;
+  --select-arrow: #cbd5e1;
+  color: var(--text);
+  background: var(--app-bg);
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-height: 100vh;
+}
+
+.app-shell.theme-light {
+  --app-bg:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 34%),
+    linear-gradient(315deg, rgba(34, 197, 94, 0.08), transparent 36%),
+    #f4f7fb;
+  --sidebar-bg: rgba(255, 255, 255, 0.88);
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-strong: #ffffff;
+  --surface-solid: #ffffff;
+  --surface-muted: rgba(226, 232, 240, 0.58);
+  --surface-muted-strong: #f8fafc;
+  --card-bg: #ffffff;
+  --card-completed-bg: #f1f5f9;
+  --control-bg: rgba(226, 232, 240, 0.72);
+  --control-hover: rgba(37, 99, 235, 0.08);
+  --text: #1e293b;
+  --text-strong: #0f172a;
+  --text-soft: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --border: rgba(100, 116, 139, 0.22);
+  --border-soft: rgba(100, 116, 139, 0.16);
+  --border-strong: rgba(100, 116, 139, 0.32);
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  --accent-text: #ffffff;
+  --button-text: #ffffff;
+  --button-bg: #2563eb;
+  --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --modal-shadow: 0 28px 90px rgba(15, 23, 42, 0.2);
+  --backdrop: rgba(15, 23, 42, 0.46);
+  --scrim: rgba(15, 23, 42, 0.38);
+  --danger-text: #dc2626;
+  --success-text: #15803d;
+  --error-text: #b91c1c;
+  --info-text: #1d4ed8;
+  --warning-text: #92400e;
+  --overdue-border: rgba(217, 119, 6, 0.32);
+  --overdue-bg: rgba(254, 243, 199, 0.72);
+  --overdue-heading: #78350f;
+  --overdue-copy: #92400e;
+  --select-arrow: #475569;
+  color-scheme: light;
 }
 
 .app-shell.sidebar-collapsed {
@@ -9,8 +99,8 @@
 }
 
 .sidebar {
-  border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(9, 13, 20, 0.84);
+  border-color: var(--border);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(18px);
 }
 
@@ -19,7 +109,7 @@
   top: 0;
   height: 100vh;
   padding: 22px;
-  border-right: 1px solid rgba(148, 163, 184, 0.16);
+  border-right: 1px solid var(--border);
   overflow-y: auto;
   overflow-x: visible;
 }
@@ -53,10 +143,10 @@
   height: 38px;
   place-items: center;
   margin-left: auto;
-  border: 1px solid rgba(147, 197, 253, 0.42) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent) !important;
   border-radius: 8px !important;
-  color: #bfdbfe !important;
-  background: rgba(96, 165, 250, 0.14) !important;
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
   box-shadow: none;
   font-size: 25px;
   font-weight: 900;
@@ -64,13 +154,13 @@
 }
 
 .collapse-button:hover {
-  color: #07111f !important;
-  background: #93c5fd !important;
+  color: var(--accent-text) !important;
+  background: var(--accent) !important;
 }
 
 .sidebar-header strong {
   display: block;
-  color: #f8fafc;
+  color: var(--text-strong);
 }
 
 .sidebar-header span,
@@ -79,7 +169,7 @@
 .manager-row input,
 .empty-state,
 .canvas-status {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .brand-mark {
@@ -98,8 +188,8 @@
   gap: 8px;
   border: 0;
   border-radius: 8px;
-  color: #08111f;
-  background: #e2e8f0;
+  color: var(--button-text);
+  background: var(--button-bg);
   font-weight: 700;
   text-decoration: none;
 }
@@ -132,7 +222,7 @@
 .canvas-status button,
 .canvas-page > button {
   border: 1px solid transparent;
-  color: #dbeafe;
+  color: var(--text);
   background: transparent;
 }
 
@@ -151,13 +241,13 @@
 .nav-list button.active,
 .nav-list button:hover,
 .class-list button:hover {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(148, 163, 184, 0.12);
+  border-color: var(--border-strong);
+  background: var(--control-hover);
 }
 
 .sidebar-section-title {
   margin: 22px 0 10px;
-  color: #64748b;
+  color: var(--text-subtle);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
@@ -185,9 +275,9 @@
   width: 48px;
   height: 48px;
   margin-left: 0;
-  border-color: rgba(147, 197, 253, 0.52) !important;
-  color: #07111f !important;
-  background: #93c5fd !important;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent) !important;
+  color: var(--accent-text) !important;
+  background: var(--accent) !important;
   font-size: 31px;
 }
 
@@ -229,8 +319,8 @@
 }
 
 .collapsed-list-dots button:hover {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(148, 163, 184, 0.12);
+  border-color: var(--border-strong);
+  background: var(--control-hover);
 }
 
 .color-dot {
@@ -246,13 +336,48 @@
   margin-bottom: 18px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 800;
+}
+
+.theme-toggle:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background: var(--accent-soft);
+}
+
+.theme-toggle span:first-child {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--accent);
+  font-size: 17px;
+  line-height: 1;
+}
+
 .topbar h1,
 .section-heading h2,
 .task-column h2,
 .calendar-title h2,
 .task-modal h2 {
   margin: 0;
-  color: #f8fafc;
+  color: var(--text-strong);
   letter-spacing: 0;
 }
 
@@ -280,9 +405,10 @@
 .list-manager,
 .task-modal {
   border: 1px solid rgba(148, 163, 184, 0.16);
+  border-color: var(--border);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.78);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .canvas-status,
@@ -298,27 +424,28 @@
 .sync-status button,
 .canvas-page > button {
   border-color: rgba(148, 163, 184, 0.24);
+  border-color: var(--border-strong);
   border-radius: 8px;
   padding: 8px 11px;
 }
 
 .status-ready,
 .status-synced {
-  color: #bbf7d0;
+  color: var(--success-text);
 }
 
 .status-error,
 .status-missing-token {
-  color: #fecaca;
+  color: var(--error-text);
 }
 
 .status-saving,
 .status-loading {
-  color: #bfdbfe;
+  color: var(--info-text);
 }
 
 .status-local {
-  color: #fde68a;
+  color: var(--warning-text);
 }
 
 .filters-bar {
@@ -349,9 +476,10 @@
 .manager-row input {
   min-height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.18);
+  border-color: var(--border-strong);
   border-radius: 8px;
-  color: #e5edf7;
-  background: rgba(2, 6, 23, 0.58);
+  color: var(--text);
+  background: var(--surface-muted-strong);
 }
 
 .filters-bar input[type='search'],
@@ -367,8 +495,8 @@
   appearance: none;
   padding-right: 44px;
   background-image:
-    linear-gradient(45deg, transparent 50%, #cbd5e1 50%),
-    linear-gradient(135deg, #cbd5e1 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--select-arrow) 50%),
+    linear-gradient(135deg, var(--select-arrow) 50%, transparent 50%);
   background-position:
     calc(100% - 25px) 50%,
     calc(100% - 19px) 50%;
@@ -400,7 +528,7 @@
   min-height: 40px;
   padding: 0 10px;
   border-radius: 8px;
-  background: rgba(2, 6, 23, 0.35);
+  background: var(--control-bg);
 }
 
 .segmented-control button {
@@ -410,8 +538,8 @@
 }
 
 .segmented-control button.active {
-  color: #08111f;
-  background: #93c5fd;
+  color: var(--accent-text);
+  background: var(--accent);
 }
 
 .summary-grid {
@@ -426,14 +554,14 @@
 }
 
 .summary-grid span {
-  color: #f8fafc;
+  color: var(--text-strong);
   font-size: 28px;
   font-weight: 800;
 }
 
 .summary-grid p {
   margin: 6px 0 0;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .list-summary {
@@ -451,11 +579,11 @@
   min-width: max-content;
   padding: 9px 11px;
   border-radius: 8px;
-  background: rgba(2, 6, 23, 0.34);
+  background: var(--surface-muted);
 }
 
 .list-summary small {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .task-columns {
@@ -473,7 +601,7 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scroll-snap-type: x proximity;
-  scrollbar-color: rgba(147, 197, 253, 0.55) rgba(15, 23, 42, 0.82);
+  scrollbar-color: color-mix(in srgb, var(--accent) 60%, transparent) var(--surface);
 }
 
 .list-board::-webkit-scrollbar {
@@ -482,12 +610,12 @@
 
 .list-board::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.82);
+  background: var(--surface);
 }
 
 .list-board::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(147, 197, 253, 0.55);
+  background: color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .task-column {
@@ -517,10 +645,10 @@
 }
 
 .list-column.is-drag-over {
-  border-color: rgba(147, 197, 253, 0.72);
+  border-color: color-mix(in srgb, var(--accent) 72%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgba(147, 197, 253, 0.48),
-    0 22px 44px rgba(37, 99, 235, 0.18);
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 48%, transparent),
+    0 22px 44px color-mix(in srgb, var(--accent-strong) 18%, transparent);
 }
 
 .list-column-header {
@@ -549,11 +677,11 @@
 .list-column-header small,
 .completed-preview,
 .completed-empty {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .drag-handle {
-  color: #64748b;
+  color: var(--text-subtle);
   font-weight: 900;
   letter-spacing: -3px;
   transform: rotate(90deg);
@@ -574,24 +702,24 @@
   gap: 10px;
   padding: 13px;
   margin-bottom: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(2, 6, 23, 0.42);
+  background: var(--card-bg);
 }
 
 .task-card.completed {
   opacity: 0.72;
-  background: rgba(2, 6, 23, 0.24);
+  background: var(--card-completed-bg);
 }
 
 .task-card.completed h3 {
-  color: #cbd5e1;
+  color: var(--text-soft);
   text-decoration: line-through;
 }
 
 .task-card.completed .task-meta,
 .task-card.completed p {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .task-check {
@@ -605,7 +733,7 @@
 }
 
 .task-card.completed .task-check {
-  color: #93c5fd;
+  color: var(--accent);
   border-color: transparent !important;
   font-size: 20px;
   font-weight: 900;
@@ -629,7 +757,7 @@
 .task-card h3 {
   min-width: 0;
   margin: 0;
-  color: #f8fafc;
+  color: var(--text-strong);
   font-size: 15px;
   line-height: 1.28;
   overflow-wrap: anywhere;
@@ -638,7 +766,7 @@
 
 .task-card p {
   margin: 7px 0 0;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.32;
   white-space: pre-wrap;
@@ -660,7 +788,7 @@
 }
 
 .danger {
-  color: #fca5a5;
+  color: var(--danger-text);
 }
 
 .priority {
@@ -703,7 +831,7 @@
   display: grid;
   min-height: 84px;
   place-items: center;
-  border: 1px dashed rgba(148, 163, 184, 0.2);
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
   text-align: center;
 }
@@ -711,7 +839,7 @@
 .completed-stack {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-top: 1px solid var(--border-soft);
 }
 
 .completed-toggle {
@@ -722,7 +850,7 @@
   min-height: 38px;
   padding: 0;
   border: 0;
-  color: #cbd5e1;
+  color: var(--text-soft);
   background: transparent;
   font-weight: 800;
   text-align: left;
@@ -733,7 +861,7 @@
   width: 22px;
   height: 22px;
   place-items: center;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .completed-preview,
@@ -767,23 +895,23 @@
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid rgba(147, 197, 253, 0.24);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   border-radius: 8px;
-  color: #bfdbfe;
-  background: rgba(96, 165, 250, 0.12);
+  color: var(--accent);
+  background: var(--accent-soft);
   font-size: 28px;
   font-weight: 900;
   line-height: 1;
 }
 
 .calendar-title button:hover {
-  color: #07111f;
+  color: var(--accent-text);
   border-color: transparent;
-  background: #93c5fd;
+  background: var(--accent);
 }
 
 .weekday {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -793,9 +921,9 @@
   position: relative;
   min-height: 126px;
   padding: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(2, 6, 23, 0.34);
+  background: var(--surface-muted);
   overflow: visible;
 }
 
@@ -811,7 +939,7 @@
   display: grid;
   place-items: center;
   margin-bottom: 8px;
-  color: #cbd5e1;
+  color: var(--text-soft);
   font-size: 12px;
   font-weight: 800;
 }
@@ -825,21 +953,21 @@
 }
 
 .calendar-day.today {
-  border-color: rgba(96, 165, 250, 0.32);
+  border-color: color-mix(in srgb, var(--accent-strong) 36%, transparent);
 }
 
 .calendar-day.today .day-number span {
-  color: #07111f;
-  background: #60a5fa;
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.14);
+  color: var(--accent-text);
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-strong) 16%, transparent);
 }
 
 .calendar-day.is-drop-target {
-  border-color: rgba(147, 197, 253, 0.7);
-  background: rgba(37, 99, 235, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent-strong) 18%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgba(147, 197, 253, 0.38),
-    0 18px 32px rgba(37, 99, 235, 0.14);
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent),
+    0 18px 32px color-mix(in srgb, var(--accent-strong) 14%, transparent);
 }
 
 .day-tasks {
@@ -851,8 +979,8 @@
 .agenda-item {
   min-width: 0;
   border: 0;
-  color: #e5edf7;
-  background: rgba(15, 23, 42, 0.82);
+  color: var(--text);
+  background: var(--surface);
   text-align: left;
 }
 
@@ -877,8 +1005,8 @@
 }
 
 .calendar-task-row.completed {
-  color: #94a3b8;
-  background: rgba(15, 23, 42, 0.42);
+  color: var(--text-muted);
+  background: var(--card-completed-bg);
 }
 
 .calendar-task-row.completed strong {
@@ -896,9 +1024,9 @@
   height: 18px;
   place-items: center;
   padding: 0;
-  border: 2px solid #93c5fd;
+  border: 2px solid var(--accent);
   border-radius: 50%;
-  color: #93c5fd;
+  color: var(--accent);
   background: transparent;
   font-size: 0;
   font-weight: 900;
@@ -910,7 +1038,7 @@
 }
 
 .calendar-task-row.completed .calendar-complete {
-  border-color: #93c5fd;
+  border-color: var(--accent);
 }
 
 .calendar-task-row.completed .calendar-complete span {
@@ -922,7 +1050,7 @@
   position: absolute;
   inset: 4px;
   border-radius: 50%;
-  background: #93c5fd;
+  background: var(--accent);
 }
 
 .calendar-task-main {
@@ -948,7 +1076,7 @@
 .calendar-task-main small {
   grid-column: 2;
   overflow: hidden;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -963,17 +1091,17 @@
 
 .more-day-button {
   min-height: 28px;
-  border: 1px solid rgba(147, 197, 253, 0.28);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
   border-radius: 6px;
-  color: #bfdbfe;
-  background: rgba(96, 165, 250, 0.14);
+  color: var(--accent);
+  background: var(--accent-soft);
   font-size: 12px;
   font-weight: 800;
 }
 
 .more-day-button:hover {
-  border-color: rgba(147, 197, 253, 0.48);
-  background: rgba(96, 165, 250, 0.22);
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .agenda-view,
@@ -1004,9 +1132,9 @@
   gap: 10px;
   margin-bottom: 14px;
   padding: 14px;
-  border: 1px solid rgba(251, 191, 36, 0.24);
+  border: 1px solid var(--overdue-border);
   border-radius: 8px;
-  background: rgba(120, 53, 15, 0.18);
+  background: var(--overdue-bg);
 }
 
 .overdue-notice-header {
@@ -1028,13 +1156,13 @@
 
 .overdue-notice h2 {
   margin: 0;
-  color: #fef3c7;
+  color: var(--overdue-heading);
   font-size: 18px;
 }
 
 .overdue-notice p {
   margin: 2px 0 0;
-  color: #fcd34d;
+  color: var(--overdue-copy);
   font-size: 13px;
 }
 
@@ -1056,11 +1184,11 @@
   max-height: min(460px, calc(100vh - 112px));
   padding: 18px 12px 14px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid var(--border-strong);
   border-radius: 18px;
-  background: #111827;
+  background: var(--surface-solid);
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.46),
+    var(--modal-shadow),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   animation: dayZoom 0.16s ease-out;
 }
@@ -1094,10 +1222,10 @@
   width: 30px;
   height: 30px;
   place-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #cbd5e1;
-  background: rgba(2, 6, 23, 0.24);
+  color: var(--text-soft);
+  background: var(--surface-muted);
   font-size: 25px;
   line-height: 1;
 }
@@ -1106,12 +1234,12 @@
   display: grid;
   justify-items: center;
   gap: 4px;
-  color: #f8fafc;
+  color: var(--text-strong);
   padding-right: 30px;
 }
 
 .day-popover-header span {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -1123,8 +1251,8 @@
   height: 50px;
   place-items: center;
   border-radius: 50%;
-  color: #07111f;
-  background: #93c5fd;
+  color: var(--accent-text);
+  background: var(--accent);
   font-size: 34px;
   line-height: 0.95;
 }
@@ -1136,7 +1264,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 3px;
-  scrollbar-color: rgba(147, 197, 253, 0.5) rgba(15, 23, 42, 0.6);
+  scrollbar-color: color-mix(in srgb, var(--accent) 54%, transparent) var(--surface-muted);
   scrollbar-width: thin;
 }
 
@@ -1146,29 +1274,29 @@
 
 .day-popover-list::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--surface-muted);
 }
 
 .day-popover-list::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(147, 197, 253, 0.5);
+  background: color-mix(in srgb, var(--accent) 54%, transparent);
 }
 
 .calendar-task-row.day-modal {
   min-height: 42px;
   padding: 8px 10px;
-  color: #e5edf7;
-  background: rgba(15, 23, 42, 0.88);
+  color: var(--text);
+  background: var(--surface);
   border-left-width: 4px;
 }
 
 .calendar-task-row.day-modal.completed {
-  color: #94a3b8;
-  background: rgba(15, 23, 42, 0.54);
+  color: var(--text-muted);
+  background: var(--card-completed-bg);
 }
 
 .calendar-task-row.day-modal .calendar-task-main small {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 @keyframes dayZoom {
@@ -1248,7 +1376,7 @@
   display: grid;
   min-width: 0;
   place-items: center;
-  color: #cbd5e1;
+  color: var(--text-soft);
   font-size: 13px;
   font-weight: 800;
 }
@@ -1268,7 +1396,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(2, 6, 23, 0.9);
+  background: var(--backdrop);
   backdrop-filter: blur(8px);
 }
 
@@ -1278,8 +1406,8 @@
   max-height: calc(100vh - 36px);
   padding: 22px;
   overflow-y: auto;
-  background: #0f172a;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  background: var(--surface-strong);
+  box-shadow: var(--modal-shadow);
 }
 
 .modal-close {
@@ -1288,15 +1416,15 @@
   right: 12px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  color: #cbd5e1;
-  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  background: var(--surface);
 }
 
 .modal-close:hover {
-  color: #f8fafc;
-  border-color: rgba(148, 163, 184, 0.34);
-  background: #172033;
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
 }
 
 .task-form,
@@ -1308,7 +1436,7 @@
 .task-form label {
   display: grid;
   gap: 6px;
-  color: #cbd5e1;
+  color: var(--text-soft);
 }
 
 .task-form textarea {
@@ -1342,9 +1470,9 @@
 .date-shortcuts button,
 .mini-calendar-header button,
 .mini-calendar-grid button {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  color: #dbeafe;
-  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface-muted);
 }
 
 .date-shortcuts button {
@@ -1357,9 +1485,9 @@
 
 .date-shortcuts button.active,
 .date-shortcuts button:hover {
-  color: #07111f;
+  color: var(--accent-text);
   border-color: transparent;
-  background: #93c5fd;
+  background: var(--accent);
 }
 
 .time-shortcuts {
@@ -1371,11 +1499,11 @@
   display: grid;
   max-height: 220px;
   overflow-y: auto;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #0f1117;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
-  scrollbar-color: #6b7280 #111827;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow);
+  scrollbar-color: var(--text-muted) var(--surface-solid);
   scrollbar-width: thin;
 }
 
@@ -1386,7 +1514,7 @@
   padding: 0 20px;
   border: 0;
   border-radius: 0;
-  color: #d4d4d8;
+  color: var(--text-soft);
   background: transparent;
   font-size: 17px;
   font-weight: 600;
@@ -1395,8 +1523,8 @@
 
 .time-shortcuts button.active,
 .time-shortcuts button:hover {
-  color: #f8fafc;
-  background: #3a3a3d;
+  color: var(--text-strong);
+  background: var(--control-hover);
 }
 
 .time-shortcuts::-webkit-scrollbar {
@@ -1404,22 +1532,22 @@
 }
 
 .time-shortcuts::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--surface-solid);
 }
 
 .time-shortcuts::-webkit-scrollbar-thumb {
-  border: 2px solid #111827;
+  border: 2px solid var(--surface-solid);
   border-radius: 999px;
-  background: #6b7280;
+  background: var(--text-muted);
 }
 
 .mini-calendar {
   width: min(360px, 100%);
   padding: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #111827;
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+  background: var(--surface-solid);
+  box-shadow: var(--shadow);
 }
 
 .mini-calendar-header {
@@ -1431,7 +1559,7 @@
 }
 
 .mini-calendar-header strong {
-  color: #e5edf7;
+  color: var(--text);
   font-size: 16px;
 }
 
@@ -1460,7 +1588,7 @@
   display: grid;
   min-height: 28px;
   place-items: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -1475,29 +1603,29 @@
 }
 
 .mini-calendar-grid button.muted {
-  color: #64748b;
+  color: var(--text-subtle);
   opacity: 0.72;
 }
 
 .mini-calendar-grid button.today {
-  border-color: #93c5fd;
-  color: #bfdbfe;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .mini-calendar-grid button.selected {
-  color: #07111f;
+  color: var(--accent-text);
   border-color: transparent;
-  background: #93c5fd;
-  box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.2);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .repeat-panel {
   display: grid;
   gap: 10px;
   padding: 13px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(2, 6, 23, 0.28);
+  background: var(--surface-muted);
 }
 
 .repeat-heading {
@@ -1508,13 +1636,13 @@
 }
 
 .repeat-heading span {
-  color: #e5edf7;
+  color: var(--text);
   font-weight: 800;
 }
 
 .repeat-heading p {
   margin: 2px 0 0;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -1544,9 +1672,9 @@
   gap: 12px;
   min-height: 52px;
   padding: 0 12px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.72);
+  background: var(--surface);
 }
 
 .forever-toggle input {
@@ -1555,11 +1683,11 @@
   min-height: 20px;
   margin: 0;
   padding: 0;
-  accent-color: #93c5fd;
+  accent-color: var(--accent);
 }
 
 .forever-toggle span {
-  color: #dbeafe;
+  color: var(--text);
   font-size: 13px;
   font-weight: 800;
   line-height: 1.15;
@@ -1576,7 +1704,7 @@
 }
 
 .details-panel p {
-  color: #cbd5e1;
+  color: var(--text-soft);
 }
 
 .details-panel dl {
@@ -1590,16 +1718,16 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 1px solid var(--border);
 }
 
 .details-panel dt {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .details-panel dd {
   margin: 0;
-  color: #f8fafc;
+  color: var(--text-strong);
 }
 
 .modal-actions {
@@ -1659,7 +1787,12 @@
 .skeleton {
   height: 84px;
   border-radius: 8px;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.18), rgba(148, 163, 184, 0.08));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text-muted) 8%, transparent),
+    color-mix(in srgb, var(--text-muted) 18%, transparent),
+    color-mix(in srgb, var(--text-muted) 8%, transparent)
+  );
   background-size: 220% 100%;
   animation: shimmer 1.4s infinite;
 }
@@ -1728,7 +1861,7 @@
     z-index: 25;
     display: block;
     border: 0;
-    background: rgba(2, 6, 23, 0.58);
+    background: var(--scrim);
   }
 
   .mobile-only {
@@ -1738,6 +1871,10 @@
 
   .topbar {
     align-items: flex-start;
+  }
+
+  .topbar-actions {
+    margin-left: auto;
   }
 
   .topbar .primary-button {
@@ -1804,8 +1941,15 @@
   .segmented-control,
   .canvas-status button,
   .sync-status button,
-  .topbar .primary-button {
+  .topbar .primary-button,
+  .theme-toggle,
+  .topbar-actions {
     width: 100%;
+  }
+
+  .topbar-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .segmented-control {

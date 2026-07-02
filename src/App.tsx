@@ -25,6 +25,15 @@ const initialFilters: TaskFilters = {
   priority: 'all',
 }
 
+type ThemeMode = 'dark' | 'light'
+
+const THEME_STORAGE_KEY = 'app-theme'
+
+function readSavedTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'dark'
+  return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
+}
+
 function mergeInitialLists(lists: typeof initialLists) {
   const currentIds = new Set(lists.map((list) => list.id))
   const missingLists = initialLists.filter((list) => !currentIds.has(list.id))
@@ -51,6 +60,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
+  const [theme, setTheme] = useState<ThemeMode>(readSavedTheme)
   const syncReady = useRef(false)
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
@@ -105,6 +115,10 @@ function App() {
     didLoadCloudState.current = true
     loadCloudState()
   })
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     if (!syncReady.current || syncDisabled.current) return
@@ -208,7 +222,7 @@ function App() {
   }
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar
         activeView={view}
         collapsed={sidebarCollapsed}
@@ -255,17 +269,29 @@ function App() {
                   : selectedList?.name ?? 'Mis tareas'}
             </h1>
           </div>
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => {
-              setEditingTask(null)
-              setIsCreatingTask(true)
-            }}
-          >
-            <span aria-hidden="true">+</span>
-            Nueva tarea
-          </button>
+          <div className="topbar-actions">
+            <button
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-pressed={theme === 'light'}
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+            >
+              <span aria-hidden="true">{theme === 'dark' ? '☾' : '☀'}</span>
+              <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>
+            </button>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => {
+                setEditingTask(null)
+                setIsCreatingTask(true)
+              }}
+            >
+              <span aria-hidden="true">+</span>
+              Nueva tarea
+            </button>
+          </div>
         </header>
 
         <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
