@@ -1,11 +1,14 @@
 type VercelRequest = {
   method?: string
   body?: unknown
+  headers?: Record<string, string | string[] | undefined>
 }
 
 type VercelResponse = {
   status: (code: number) => VercelResponse
+  setHeader: (name: string, value: string) => void
   json: (body: unknown) => void
+  end?: () => void
 }
 
 type SyncState = {
@@ -29,6 +32,27 @@ function config() {
   return { serviceRoleKey, supabaseUrl, syncId }
 }
 
+function getHeader(request: VercelRequest, name: string) {
+  const value = request.headers?.[name] ?? request.headers?.[name.toLowerCase()]
+  return Array.isArray(value) ? value[0] : value
+}
+
+function applyCors(request: VercelRequest, response: VercelResponse) {
+  const origin = getHeader(request, 'origin')
+  const allowedOrigins = (process.env.CHALENDAR_ALLOWED_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+    response.setHeader('Access-Control-Allow-Origin', allowedOrigins.includes('*') ? '*' : origin)
+    response.setHeader('Vary', 'Origin')
+  }
+
+  response.setHeader('Access-Control-Allow-Methods', 'GET,PUT,OPTIONS')
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+}
+
 async function readBody(request: VercelRequest) {
   if (typeof request.body === 'string') {
     return JSON.parse(request.body) as unknown
@@ -37,6 +61,14 @@ async function readBody(request: VercelRequest) {
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
+  applyCors(request, response)
+
+  if (request.method === 'OPTIONS') {
+    response.status(204)
+    response.end?.()
+    return
+  }
+
   const syncConfig = config()
   if (!syncConfig) {
     response.status(404).json({

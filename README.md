@@ -31,9 +31,18 @@ Chalendar guarda una copia local en `localStorage` y, si configuras Supabase, si
 SUPABASE_URL=https://tu-proyecto.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 CHALENDAR_SYNC_ID=default
+CHALENDAR_ALLOWED_ORIGINS=https://task-dashboard-flame-beta.vercel.app,http://localhost:5173,http://127.0.0.1:5173
 ```
 
 No pongas `SUPABASE_SERVICE_ROLE_KEY` como `VITE_*`. Esa llave solo debe vivir en el servidor.
+
+Para que localhost, el dominio y otro despliegue lean las mismas tareas, todos deben usar el mismo `CHALENDAR_SYNC_ID` y apuntar al mismo API de sincronización. En local puedes poner esta variable con la URL publica de tu despliegue en Vercel:
+
+```bash
+VITE_SYNC_API_BASE_URL=https://task-dashboard-flame-beta.vercel.app
+```
+
+`VITE_SYNC_API_BASE_URL` no es una llave secreta; solo le dice al navegador dónde está `/api/sync/state`. Si la dejas vacía, la app usa el mismo dominio donde está abierta.
 
 ## Canvas LMS
 

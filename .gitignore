@@ -37,6 +37,7 @@ canvas-token*
 *.db
 *.dump
 *.sql
+!docs/supabase-schema.sql
 *.bak
 *.backup
 

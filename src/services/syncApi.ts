@@ -6,8 +6,11 @@ type SyncResponse = {
   error?: string
 }
 
+const syncApiBaseUrl = import.meta.env.VITE_SYNC_API_BASE_URL?.trim().replace(/\/$/, '') ?? ''
+const syncStateUrl = `${syncApiBaseUrl}/api/sync/state`
+
 export async function fetchSyncState() {
-  const response = await fetch('/api/sync/state')
+  const response = await fetch(syncStateUrl)
   const data = (await response.json().catch(() => ({}))) as SyncResponse
 
   if (response.status === 404 && data.code === 'sync-disabled') {
@@ -22,7 +25,7 @@ export async function fetchSyncState() {
 }
 
 export async function saveSyncState(state: SyncState) {
-  const response = await fetch('/api/sync/state', {
+  const response = await fetch(syncStateUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
