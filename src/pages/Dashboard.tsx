@@ -4,7 +4,7 @@ import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
 import { readableColor, visibleOnLightColor } from '../utils/colors'
 import { isOverdue } from '../utils/dates'
-import { countTasksOncePerInfiniteSeries } from '../utils/taskCounts'
+import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
 
 type DashboardProps = {
   allTasks: Task[]
@@ -46,11 +46,11 @@ export function Dashboard({
     <>
       <section className="summary-grid">
         <div>
-          <span>{countTasksOncePerInfiniteSeries(allTasks.filter((task) => !task.completed))}</span>
+          <span>{countTasksOncePerRecurringSeries(allTasks.filter((task) => !task.completed))}</span>
           <p>Pendientes</p>
         </div>
         <div>
-          <span>{countTasksOncePerInfiniteSeries(allTasks.filter(isOverdue))}</span>
+          <span>{countTasksOncePerRecurringSeries(allTasks.filter(isOverdue))}</span>
           <p>Vencidas</p>
         </div>
         <div>
@@ -69,9 +69,11 @@ export function Dashboard({
           const pendingTasks = completedOnly
             ? []
             : listTasks.filter((task) => !task.completed)
-          const pendingCount = countTasksOncePerInfiniteSeries(pendingTasks)
+          const visiblePendingTasks = getNextTaskPerRecurringSeries(pendingTasks)
+          const pendingCount = countTasksOncePerRecurringSeries(pendingTasks)
           const completedTasks = listTasks.filter((task) => task.completed)
-          const completedCount = countTasksOncePerInfiniteSeries(completedTasks)
+          const visibleCompletedTasks = getNextTaskPerRecurringSeries(completedTasks)
+          const completedCount = countTasksOncePerRecurringSeries(completedTasks)
           const completedOpen = completedOnly || expandedCompleted[list.id]
           const visibleColor = visibleOnLightColor(list.color)
           const listAccentStyle = {
@@ -115,8 +117,8 @@ export function Dashboard({
               </header>
 
               <div className="pending-stack">
-                {pendingTasks.length ? (
-                  pendingTasks.map((task) => (
+                {visiblePendingTasks.length ? (
+                  visiblePendingTasks.map((task) => (
                     <TaskCard
                       key={task.id}
                       compact
@@ -148,8 +150,8 @@ export function Dashboard({
                 </button>
 
                 {completedOpen ? (
-                  completedTasks.length ? (
-                    completedTasks.map((task) => (
+                  visibleCompletedTasks.length ? (
+                    visibleCompletedTasks.map((task) => (
                       <TaskCard
                         key={task.id}
                         compact
@@ -163,7 +165,7 @@ export function Dashboard({
                   ) : (
                     <div className="completed-empty">Todavía no hay completadas.</div>
                   )
-                ) : completedTasks.length ? (
+                ) : visibleCompletedTasks.length ? (
                   <div className="completed-preview">
                     {completedCount} completadas ocultas
                   </div>

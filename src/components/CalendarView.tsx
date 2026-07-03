@@ -30,6 +30,31 @@ function sortCalendarTasks(tasks: Task[]) {
   })
 }
 
+function sortOverdueTasks(tasks: Task[]) {
+  return [...tasks].sort((a, b) => {
+    const colorComparison = a.color.localeCompare(b.color)
+    if (colorComparison !== 0) return colorComparison
+
+    const dateA = `${a.dueDate || '9999-12-31'} ${a.dueTime || '23:59'}`
+    const dateB = `${b.dueDate || '9999-12-31'} ${b.dueTime || '23:59'}`
+    return dateA.localeCompare(dateB)
+  })
+}
+
+function formatOverdueDateLabel(date: string) {
+  if (!date) return 'Sin fecha'
+
+  const formattedDate = new Intl.DateTimeFormat('es-MX', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+    .format(new Date(`${date}T12:00:00`))
+    .replace('.', '')
+
+  return `Era para ${formattedDate}`
+}
+
 export function CalendarView({
   mode,
   tasks,
@@ -37,12 +62,14 @@ export function CalendarView({
   onMoveTask,
   onOpenTask,
 }: CalendarViewProps) {
-  const [expandedDay, setExpandedDay] = useState<{ date: string; tasks: Task[] } | null>(null)
+  const [expandedDay, setExpandedDay] = useState<{ date: string } | null>(null)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [dropDate, setDropDate] = useState<string | null>(null)
   const [visibleDate, setVisibleDate] = useState(() => new Date())
   const sortedTasks = sortCalendarTasks(tasks)
-  const overdueTasks = sortedTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < todayISO())
+  const overdueTasks = sortOverdueTasks(
+    sortedTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < todayISO()),
+  )
 
   const dropTaskOnDate = (date: string) => {
     if (!draggedTask) return
@@ -155,7 +182,7 @@ export function CalendarView({
                   <button
                     className="more-day-button"
                     type="button"
-                    onClick={() => setExpandedDay({ date: iso, tasks: dayTasks })}
+                    onClick={() => setExpandedDay({ date: iso })}
                   >
                     +{dayTasks.length - (mode === 'week' ? 8 : 3)} más
                   </button>
@@ -166,7 +193,7 @@ export function CalendarView({
                   date={expandedDay.date}
                   position={popoverPosition}
                   verticalPosition={popoverVerticalPosition}
-                  tasks={expandedDay.tasks}
+                  tasks={dayTasks}
                   onClose={() => setExpandedDay(null)}
                   onComplete={onComplete}
                   onDragEnd={() => setDraggedTask(null)}
@@ -237,8 +264,10 @@ function CalendarTaskRow({
         <span className="calendar-task-dot"></span>
         <strong>{task.title}</strong>
         <small>
-          {variant === 'agenda' || variant === 'day-modal' || variant === 'overdue'
-            ? formatDateLabel(task.dueDate)
+          {variant === 'overdue'
+            ? formatOverdueDateLabel(task.dueDate)
+            : variant === 'agenda' || variant === 'day-modal'
+              ? formatDateLabel(task.dueDate)
             : task.dueTime || 'Todo el día'}
         </small>
       </button>

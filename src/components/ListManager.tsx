@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
 import { palette } from '../utils/colors'
-import { countTasksOncePerInfiniteSeries } from '../utils/taskCounts'
+import { countTasksOncePerRecurringSeries } from '../utils/taskCounts'
 
 type ListManagerProps = {
   lists: TaskList[]
@@ -72,7 +72,7 @@ export function ListManager({
             />
             {tasks.length ? (
               <span className="manager-count">
-                {countTasksOncePerInfiniteSeries(
+                {countTasksOncePerRecurringSeries(
                   tasks.filter((task) => task.listId === list.id && !task.completed),
                 )}
               </span>
