@@ -1,8 +1,10 @@
-import { useState, type DragEvent } from 'react'
+import { useState, type CSSProperties, type DragEvent } from 'react'
 import { TaskCard } from '../components/TaskCard'
 import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
+import { readableColor, visibleOnLightColor } from '../utils/colors'
 import { isOverdue } from '../utils/dates'
+import { countTasksOncePerInfiniteSeries } from '../utils/taskCounts'
 
 type DashboardProps = {
   allTasks: Task[]
@@ -44,11 +46,11 @@ export function Dashboard({
     <>
       <section className="summary-grid">
         <div>
-          <span>{allTasks.filter((task) => !task.completed).length}</span>
+          <span>{countTasksOncePerInfiniteSeries(allTasks.filter((task) => !task.completed))}</span>
           <p>Pendientes</p>
         </div>
         <div>
-          <span>{allTasks.filter(isOverdue).length}</span>
+          <span>{countTasksOncePerInfiniteSeries(allTasks.filter(isOverdue))}</span>
           <p>Vencidas</p>
         </div>
         <div>
@@ -67,8 +69,17 @@ export function Dashboard({
           const pendingTasks = completedOnly
             ? []
             : listTasks.filter((task) => !task.completed)
+          const pendingCount = countTasksOncePerInfiniteSeries(pendingTasks)
           const completedTasks = listTasks.filter((task) => task.completed)
+          const completedCount = countTasksOncePerInfiniteSeries(completedTasks)
           const completedOpen = completedOnly || expandedCompleted[list.id]
+          const visibleColor = visibleOnLightColor(list.color)
+          const listAccentStyle = {
+            '--task-color': list.color,
+            '--task-visible-color': visibleColor,
+            '--task-text-color': readableColor(list.color),
+            '--task-visible-text-color': readableColor(visibleColor),
+          } as CSSProperties
 
           return (
             <article
@@ -95,10 +106,10 @@ export function Dashboard({
               onDrop={(event) => handleDrop(event, list.id)}
             >
               <header className="list-column-header">
-                <span className="list-color" style={{ background: list.color }}></span>
+                <span className="list-color" style={listAccentStyle}></span>
                 <div>
                   <h2>{list.name}</h2>
-                  <small>{pendingTasks.length} pendientes · arrastra para ordenar</small>
+                  <small>{pendingCount} pendientes · arrastra para ordenar</small>
                 </div>
                 <span className="drag-handle" aria-hidden="true">⋮⋮</span>
               </header>
@@ -133,7 +144,7 @@ export function Dashboard({
                   }
                 >
                   <span aria-hidden="true">{completedOpen ? '⌄' : '›'}</span>
-                  Completadas ({completedTasks.length})
+                  Completadas ({completedCount})
                 </button>
 
                 {completedOpen ? (
@@ -154,7 +165,7 @@ export function Dashboard({
                   )
                 ) : completedTasks.length ? (
                   <div className="completed-preview">
-                    {completedTasks.length} completadas ocultas
+                    {completedCount} completadas ocultas
                   </div>
                 ) : null}
               </section>

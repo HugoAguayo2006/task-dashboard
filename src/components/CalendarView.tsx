@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { CalendarMode, Task } from '../types/task'
+import { readableColor, visibleOnLightColor } from '../utils/colors'
 import {
   buildMonthDays,
   buildWeekDays,
@@ -201,6 +202,13 @@ function CalendarTaskRow({
 }: CalendarTaskRowProps) {
   const overdue = isOverdue(task)
   const canDrag = task.source === 'manual'
+  const visibleColor = visibleOnLightColor(task.color)
+  const taskAccentStyle = {
+    '--task-color': task.color,
+    '--task-visible-color': visibleColor,
+    '--task-text-color': readableColor(task.color),
+    '--task-visible-text-color': readableColor(visibleColor),
+  } as CSSProperties
 
   return (
     <div
@@ -208,7 +216,7 @@ function CalendarTaskRow({
         overdue ? 'overdue' : ''
       }`}
       draggable={canDrag}
-      style={{ borderLeftColor: task.color }}
+      style={taskAccentStyle}
       onDragEnd={onDragEnd}
       onDragStart={(event) => {
         if (!canDrag) return
@@ -226,7 +234,7 @@ function CalendarTaskRow({
         <span aria-hidden="true"></span>
       </button>
       <button className="calendar-task-main" type="button" onClick={() => onOpenTask(task)}>
-        <span className="calendar-task-dot" style={{ background: task.color }}></span>
+        <span className="calendar-task-dot"></span>
         <strong>{task.title}</strong>
         <small>
           {variant === 'agenda' || variant === 'day-modal' || variant === 'overdue'

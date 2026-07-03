@@ -30,6 +30,8 @@ export type Task = {
   recurrenceIndex?: number
   recurrenceTotal?: number
   recurrenceForever?: boolean
+  recurrenceInterval?: number
+  recurrenceUnit?: RepeatUnit
   reviewed?: boolean
   contextName?: string
   createdAt: string

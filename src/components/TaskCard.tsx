@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react'
 import type { Task } from '../types/task'
+import { readableColor, visibleOnLightColor } from '../utils/colors'
 import { formatTaskDateLabel, isOverdue } from '../utils/dates'
 
 type TaskCardProps = {
@@ -19,12 +21,22 @@ export function TaskCard({
   onOpen,
 }: TaskCardProps) {
   const overdue = isOverdue(task)
+  const visibleColor = visibleOnLightColor(task.color)
+  const taskAccentStyle = {
+    '--task-color': task.color,
+    '--task-visible-color': visibleColor,
+    '--task-text-color': readableColor(task.color),
+    '--task-visible-text-color': readableColor(visibleColor),
+  } as CSSProperties
+
   return (
-    <article className={`task-card ${task.completed ? 'completed' : ''} ${compact ? 'compact' : ''}`}>
+    <article
+      className={`task-card ${task.completed ? 'completed' : ''} ${compact ? 'compact' : ''}`}
+      style={taskAccentStyle}
+    >
       <button
         aria-label={task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}
         className="task-check"
-        style={{ borderColor: task.color }}
         type="button"
         onClick={() => onComplete(task)}
       >
@@ -42,7 +54,7 @@ export function TaskCard({
         <div className="task-meta">
           <span className={overdue ? 'danger' : ''}>{formatTaskDateLabel(task)}</span>
           {task.dueTime ? <span>{task.dueTime}</span> : null}
-          <span style={{ color: task.color }}>{task.source === 'canvas' ? 'Canvas' : 'Manual'}</span>
+          <span className="task-source-label">{task.source === 'canvas' ? 'Canvas' : 'Manual'}</span>
           {task.tags.map((tag) => (
             <span key={tag}>#{tag}</span>
           ))}

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
+import { readableColor, visibleOnLightColor } from '../utils/colors'
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
@@ -65,6 +66,12 @@ function formatTimeOption(time: string) {
   return `${hour}:${String(rawMinute).padStart(2, '0')} ${period}`
 }
 
+function normalizeOccurrences(value: string | number) {
+  const numericValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numericValue)) return 2
+  return Math.max(2, Math.min(60, Math.trunc(numericValue)))
+}
+
 export function TaskModal({
   lists,
   mode,
@@ -80,6 +87,7 @@ export function TaskModal({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
+  const [occurrencesText, setOccurrencesText] = useState(String(emptyDraft.repeat.occurrences))
 
   useEffect(() => {
     setDraft(
@@ -98,7 +106,19 @@ export function TaskModal({
     )
     setTagText(task?.tags.join(', ') ?? '')
     setShowTimePicker(false)
+    setOccurrencesText(String(task ? emptyDraft.repeat.occurrences : emptyDraft.repeat.occurrences))
   }, [lists, task])
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [onClose])
 
   const listName = lists.find((list) => list.id === task?.listId)?.name ?? task?.contextName ?? 'Canvas'
   const quickDate = (dueDate: string) => {
@@ -115,6 +135,27 @@ export function TaskModal({
       },
     }))
   }
+  const commitOccurrences = (value = occurrencesText) => {
+    const occurrences = normalizeOccurrences(value || draft.repeat.occurrences)
+    setOccurrencesText(String(occurrences))
+    setDraft((current) => ({
+      ...current,
+      repeat: {
+        ...current.repeat,
+        occurrences,
+      },
+    }))
+    return occurrences
+  }
+  const visibleColor = task ? visibleOnLightColor(task.color) : ''
+  const taskAccentStyle = task
+    ? ({
+        '--task-color': task.color,
+        '--task-visible-color': visibleColor,
+        '--task-text-color': readableColor(task.color),
+        '--task-visible-text-color': readableColor(visibleColor),
+      } as CSSProperties)
+    : undefined
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -125,7 +166,7 @@ export function TaskModal({
 
         {mode === 'details' && task ? (
           <div className="details-panel">
-            <span className="source-pill" style={{ background: task.color }}>
+            <span className="source-pill" style={taskAccentStyle}>
               {task.source === 'canvas' ? 'Canvas' : listName}
             </span>
             <h2>{task.title}</h2>
@@ -183,8 +224,13 @@ export function TaskModal({
             onSubmit={(event) => {
               event.preventDefault()
               if (!draft.title.trim() || !draft.listId) return
+              const occurrences = commitOccurrences()
               onSave({
                 ...draft,
+                repeat: {
+                  ...draft.repeat,
+                  occurrences,
+                },
                 tags: tagText
                   .split(',')
                   .map((tag) => tag.trim())
@@ -421,19 +467,23 @@ export function TaskModal({
                     <label>
                       Repeticiones
                       <input
-                        min={2}
-                        max={60}
-                        type="number"
-                        value={draft.repeat.occurrences}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            repeat: {
-                              ...draft.repeat,
-                              occurrences: Math.max(2, Math.min(60, Number(event.target.value) || 2)),
-                            },
-                          })
-                        }
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={occurrencesText}
+                        onBlur={() => commitOccurrences()}
+                        onChange={(event) => {
+                          const value = event.target.value.replace(/\D/g, '').slice(0, 2)
+                          setOccurrencesText(value)
+                          if (value) {
+                            setDraft({
+                              ...draft,
+                              repeat: {
+                                ...draft.repeat,
+                                occurrences: normalizeOccurrences(value),
+                              },
+                            })
+                          }
+                        }}
                       />
                     </label>
                   ) : null}
