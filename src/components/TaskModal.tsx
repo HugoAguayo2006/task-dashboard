@@ -158,8 +158,14 @@ export function TaskModal({
     : undefined
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="task-modal" role="dialog" aria-modal="true" aria-label="Detalle de tarea">
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="task-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle de tarea"
+        onClick={(event) => event.stopPropagation()}
+      >
         <button aria-label="Cerrar modal" className="modal-close" type="button" onClick={onClose}>
           ×
         </button>
