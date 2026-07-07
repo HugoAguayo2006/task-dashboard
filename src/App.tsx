@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
 import { ExternalCalendarStatus } from './components/ExternalCalendarStatus'
@@ -67,6 +67,7 @@ function App() {
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
   const lastSavedCloudState = useRef('')
+  const workspaceRef = useRef<HTMLElement | null>(null)
 
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
@@ -122,6 +123,11 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
   }, [theme])
+
+  useLayoutEffect(() => {
+    workspaceRef.current?.scrollTo({ left: 0, top: 0 })
+    window.scrollTo({ left: 0, top: 0 })
+  }, [calendarMode, filters.listId, view])
 
   useEffect(() => {
     if (!syncReady.current || syncDisabled.current) return
@@ -260,7 +266,7 @@ function App() {
         }}
       />
 
-      <main className="workspace">
+      <main className="workspace" ref={workspaceRef}>
         <header className="topbar">
           <button
             aria-label="Abrir navegación"
