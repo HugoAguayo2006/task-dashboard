@@ -154,7 +154,7 @@ export function CalendarView({
               key={iso}
               onDragLeave={() => setDropDate(null)}
               onDragOver={(event) => {
-                if (!draggedTask || draggedTask.source === 'canvas') return
+                if (!draggedTask || draggedTask.source !== 'manual') return
                 event.preventDefault()
                 setDropDate(iso)
               }}

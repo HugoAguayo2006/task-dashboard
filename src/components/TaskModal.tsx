@@ -120,7 +120,10 @@ export function TaskModal({
     return () => window.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
-  const listName = lists.find((list) => list.id === task?.listId)?.name ?? task?.contextName ?? 'Canvas'
+  const listName =
+    task?.source === 'external-calendar'
+      ? task.externalCalendarName ?? task.contextName ?? 'Gmail/Outlook'
+      : lists.find((list) => list.id === task?.listId)?.name ?? task?.contextName ?? 'Canvas'
   const quickDate = (dueDate: string) => {
     setDraft((current) => ({ ...current, dueDate }))
     setShowDatePicker(false)
@@ -173,7 +176,11 @@ export function TaskModal({
         {mode === 'details' && task ? (
           <div className="details-panel">
             <span className="source-pill" style={taskAccentStyle}>
-              {task.source === 'canvas' ? 'Canvas' : listName}
+              {task.source === 'canvas'
+                ? 'Canvas'
+                : task.source === 'external-calendar'
+                  ? listName
+                  : listName}
             </span>
             <h2>{task.title}</h2>
             <p>{task.description || 'Sin descripción adicional.'}</p>
@@ -207,15 +214,19 @@ export function TaskModal({
             </dl>
             {task.canvasUrl ? (
               <a className="canvas-link" href={task.canvasUrl} rel="noreferrer" target="_blank">
-                Abrir en Canvas
+                {task.source === 'canvas' ? 'Abrir en Canvas' : 'Abrir evento'}
               </a>
             ) : null}
             <div className="modal-actions">
               <button className="state-button" type="button" onClick={() => onComplete(task)}>
-                {task.source === 'canvas' ? 'Marcar revisada' : 'Cambiar estado'}
+                {task.source === 'manual'
+                  ? 'Cambiar estado'
+                  : task.completed
+                    ? 'Marcar pendiente'
+                    : 'Marcar revisada'}
               </button>
               <button className="danger-button" type="button" onClick={() => onDelete(task)}>
-                {task.source === 'canvas' ? 'Ocultar' : 'Eliminar'}
+                {task.source === 'manual' ? 'Eliminar' : 'Ocultar'}
               </button>
               {task.source === 'manual' && task.recurrenceId ? (
                 <button className="danger-outline-button" type="button" onClick={() => onDeleteSeries(task)}>

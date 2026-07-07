@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
+import { ExternalCalendarStatus } from './components/ExternalCalendarStatus'
 import { FiltersBar } from './components/FiltersBar'
 import { Sidebar } from './components/Sidebar'
 import { SyncStatusBar } from './components/SyncStatusBar'
@@ -9,6 +10,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { CanvasPage } from './pages/CanvasPage'
 import { Dashboard } from './pages/Dashboard'
 import { useCanvasTasks } from './hooks/useCanvasTasks'
+import { useExternalCalendarTasks } from './hooks/useExternalCalendarTasks'
 import { useLists } from './hooks/useLists'
 import { useTasks } from './hooks/useTasks'
 import { initialLists, makeInitialTasks } from './data/initialWorkspace'
@@ -69,6 +71,7 @@ function App() {
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
   const canvasState = useCanvasTasks()
+  const externalCalendarState = useExternalCalendarTasks()
 
   const loadCloudState = async () => {
     setSyncStatus('loading')
@@ -150,8 +153,8 @@ function App() {
   }, [listsState.lists, tasksState.tasks])
 
   const allTasks = useMemo(
-    () => [...tasksState.tasks, ...canvasState.tasks],
-    [canvasState.tasks, tasksState.tasks],
+    () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
+    [canvasState.tasks, externalCalendarState.tasks, tasksState.tasks],
   )
 
   const boardTasks = useMemo(
@@ -179,12 +182,21 @@ function App() {
       canvasState.markReviewed(task.id)
       return
     }
+    if (task.source === 'external-calendar') {
+      externalCalendarState.toggleReviewed(task.id)
+      return
+    }
     tasksState.toggleTask(task.id)
   }
 
   const handleDelete = (task: Task) => {
     if (task.source === 'canvas') {
       canvasState.hideTask(task.id)
+      setSelectedTask(null)
+      return
+    }
+    if (task.source === 'external-calendar') {
+      externalCalendarState.hideTask(task.id)
       setSelectedTask(null)
       return
     }
@@ -201,7 +213,7 @@ function App() {
   }
 
   const handleMoveTask = (task: Task, dueDate: string) => {
-    if (task.source === 'canvas' || task.dueDate === dueDate) return
+    if (task.source !== 'manual' || task.dueDate === dueDate) return
 
     tasksState.updateTask(task.id, {
       title: task.title,
@@ -295,6 +307,10 @@ function App() {
         </header>
 
         <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
+        <ExternalCalendarStatus
+          status={externalCalendarState.status}
+          onRefresh={externalCalendarState.refresh}
+        />
         <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
 
         <FiltersBar
