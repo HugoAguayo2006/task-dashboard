@@ -20,6 +20,7 @@ type SidebarProps = {
 
 const navItems: Array<{ id: AppView; label: string; icon: string }> = [
   { id: 'lists', label: 'Listas', icon: '≡' },
+  { id: 'today', label: 'Hoy', icon: '!' },
   { id: 'calendar', label: 'Calendario', icon: '◫' },
   { id: 'canvas', label: 'Canvas', icon: '◇' },
 ]

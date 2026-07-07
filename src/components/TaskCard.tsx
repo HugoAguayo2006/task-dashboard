@@ -54,7 +54,13 @@ export function TaskCard({
         <div className="task-meta">
           <span className={overdue ? 'danger' : ''}>{formatTaskDateLabel(task)}</span>
           {task.dueTime ? <span>{task.dueTime}</span> : null}
-          <span className="task-source-label">{task.source === 'canvas' ? 'Canvas' : 'Manual'}</span>
+          <span className="task-source-label">
+            {task.source === 'canvas'
+              ? 'Canvas'
+              : task.source === 'external-calendar'
+                ? 'Gmail/Outlook'
+                : 'Manual'}
+          </span>
           {task.tags.map((tag) => (
             <span key={tag}>#{tag}</span>
           ))}

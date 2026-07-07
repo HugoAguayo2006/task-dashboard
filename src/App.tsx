@@ -9,6 +9,7 @@ import { TaskModal } from './components/TaskModal'
 import { CalendarPage } from './pages/CalendarPage'
 import { CanvasPage } from './pages/CanvasPage'
 import { Dashboard } from './pages/Dashboard'
+import { TodayPage, type TodayFilters } from './pages/TodayPage'
 import { useCanvasTasks } from './hooks/useCanvasTasks'
 import { useExternalCalendarTasks } from './hooks/useExternalCalendarTasks'
 import { useLists } from './hooks/useLists'
@@ -25,6 +26,11 @@ const initialFilters: TaskFilters = {
   source: 'all',
   status: 'pending',
   priority: 'all',
+}
+
+const initialTodayFilters: TodayFilters = {
+  ...initialFilters,
+  dateScope: 'today',
 }
 
 type ThemeMode = 'dark' | 'light'
@@ -56,6 +62,7 @@ function App() {
   const [view, setView] = useState<AppView>('lists')
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
   const [filters, setFilters] = useState<TaskFilters>(initialFilters)
+  const [todayFilters, setTodayFilters] = useState<TodayFilters>(initialTodayFilters)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isCreatingTask, setIsCreatingTask] = useState(false)
@@ -284,7 +291,9 @@ function App() {
                 ? 'Calendario'
                 : view === 'canvas'
                   ? 'Canvas'
-                  : selectedList?.name ?? 'Mis tareas'}
+                  : view === 'today'
+                    ? 'Hoy'
+                    : selectedList?.name ?? 'Mis tareas'}
             </h1>
           </div>
           <div className="topbar-actions">
@@ -319,14 +328,16 @@ function App() {
         />
         <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
 
-        <FiltersBar
-          calendarMode={calendarMode}
-          filters={filters}
-          lists={listsState.lists}
-          showCalendarModes={view === 'calendar'}
-          onCalendarModeChange={setCalendarMode}
-          onFiltersChange={setFilters}
-        />
+        {view !== 'today' ? (
+          <FiltersBar
+            calendarMode={calendarMode}
+            filters={filters}
+            lists={listsState.lists}
+            showCalendarModes={view === 'calendar'}
+            onCalendarModeChange={setCalendarMode}
+            onFiltersChange={setFilters}
+          />
+        ) : null}
 
         {view === 'lists' ? (
           <Dashboard
@@ -342,6 +353,26 @@ function App() {
             }}
             onOpen={setSelectedTask}
             onReorderLists={listsState.reorderLists}
+          />
+        ) : null}
+
+        {view === 'today' ? (
+          <TodayPage
+            filters={todayFilters}
+            lists={listsState.lists}
+            tasks={allTasks}
+            onComplete={handleComplete}
+            onCreateTodayTask={() => {
+              setEditingTask(null)
+              setIsCreatingTask(true)
+            }}
+            onDelete={handleDelete}
+            onEdit={(task) => {
+              setEditingTask(task)
+              setIsCreatingTask(true)
+            }}
+            onFiltersChange={setTodayFilters}
+            onOpen={setSelectedTask}
           />
         ) : null}
 

@@ -1,6 +1,6 @@
 export type TaskSource = 'manual' | 'canvas' | 'external-calendar'
 export type TaskPriority = 'low' | 'medium' | 'high'
-export type AppView = 'calendar' | 'lists' | 'canvas'
+export type AppView = 'today' | 'calendar' | 'lists' | 'canvas'
 export type CalendarMode = 'month' | 'week' | 'agenda'
 export type RepeatUnit = 'day' | 'week' | 'month'
 
