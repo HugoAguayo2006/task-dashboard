@@ -275,26 +275,28 @@ function App() {
 
       <main className="workspace" ref={workspaceRef}>
         <header className="topbar">
-          <button
-            aria-label="Abrir navegación"
-            className="icon-button mobile-only"
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          <div>
-            <h1>
-              {view === 'calendar'
-                ? 'Calendario'
-                : view === 'canvas'
-                  ? 'Canvas'
-                  : view === 'today'
-                    ? 'Hoy'
-                    : selectedList?.name ?? 'Mis tareas'}
-            </h1>
+          <div className="topbar-main">
+            <button
+              aria-label="Abrir navegación"
+              className="icon-button mobile-only"
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+            <div>
+              <h1>
+                {view === 'calendar'
+                  ? 'Calendario'
+                  : view === 'canvas'
+                    ? 'Canvas'
+                    : view === 'today'
+                      ? 'Hoy'
+                      : selectedList?.name ?? 'Mis tareas'}
+              </h1>
+            </div>
           </div>
           <div className="topbar-actions">
             <button
