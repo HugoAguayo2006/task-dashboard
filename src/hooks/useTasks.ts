@@ -235,24 +235,40 @@ export function useTasks(lists: TaskList[]) {
   }
 
   const updateTask = (id: string, draft: TaskDraft) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              color: listColors.get(draft.listId) ?? task.color,
-              description: draft.description.trim(),
-              dueDate: draft.dueDate,
-              dueTime: draft.dueTime,
-              listId: draft.listId,
-              priority: draft.priority,
-              tags: draft.tags,
-              title: draft.title.trim(),
-              updatedAt: new Date().toISOString(),
-            }
-          : task,
-      ),
-    )
+    setTasks((current) => {
+      const taskToUpdate = current.find((task) => task.id === id)
+      const timestamp = new Date().toISOString()
+      const title = draft.title.trim()
+      const description = draft.description.trim()
+
+      return current.map((task) => {
+        if (task.id === id) {
+          return {
+            ...task,
+            color: listColors.get(draft.listId) ?? task.color,
+            description,
+            dueDate: draft.dueDate,
+            dueTime: draft.dueTime,
+            listId: draft.listId,
+            priority: draft.priority,
+            tags: draft.tags,
+            title,
+            updatedAt: timestamp,
+          }
+        }
+
+        if (taskToUpdate?.recurrenceId && task.recurrenceId === taskToUpdate.recurrenceId) {
+          return {
+            ...task,
+            description,
+            title,
+            updatedAt: timestamp,
+          }
+        }
+
+        return task
+      })
+    })
   }
 
   const toggleTask = (id: string) => {
