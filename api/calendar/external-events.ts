@@ -265,10 +265,8 @@ function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   let feeds: CalendarFeed[] = []
   try {
-    feeds = parseFeeds(
-      process.env.CHALENDAR_EXTERNAL_CALENDAR_FEEDS ??
-        readLocalEnv('CHALENDAR_EXTERNAL_CALENDAR_FEEDS'),
-    )
+    const configuredFeeds = process.env.CHALENDAR_EXTERNAL_CALENDAR_FEEDS?.trim()
+    feeds = parseFeeds(configuredFeeds || readLocalEnv('CHALENDAR_EXTERNAL_CALENDAR_FEEDS'))
   } catch {
     response.status(400).json({
       code: 'invalid-feeds',
@@ -299,19 +297,37 @@ export default async function handler(request: VercelRequest, response: VercelRe
         })
 
         if (!calendarResponse.ok) {
-          throw new Error(`calendar-feed-${calendarResponse.status}`)
+          return {
+            error: {
+              name: feed.name,
+              status: calendarResponse.status,
+            },
+            events: [],
+          }
         }
 
         const text = await calendarResponse.text()
-        return parseIcs(text).flatMap((event) => expandEvent(event, feed, rangeStart, rangeEnd))
+        return {
+          events: parseIcs(text).flatMap((event) => expandEvent(event, feed, rangeStart, rangeEnd)),
+        }
       }),
     )
 
     const events = results
-      .flat()
+      .flatMap((result) => result.events)
       .sort((a, b) => a.start.localeCompare(b.start))
+    const errors = results.flatMap((result) => (result.error ? [result.error] : []))
 
-    response.status(200).json({ events })
+    if (!events.length && errors.length) {
+      response.status(502).json({
+        code: 'external-calendar-error',
+        error: 'No se pudieron consultar los calendarios externos.',
+        detail: errors,
+      })
+      return
+    }
+
+    response.status(200).json({ events, warnings: errors })
   } catch {
     response.status(502).json({
       code: 'external-calendar-error',
