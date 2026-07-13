@@ -14,6 +14,7 @@ type TaskModalProps = {
   onComplete: (task: Task) => void
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
+  onMoveTask: (task: Task, dueDate: string) => void
   onSave: (draft: TaskDraft) => void
 }
 
@@ -80,6 +81,7 @@ export function TaskModal({
   onComplete,
   onDelete,
   onDeleteSeries,
+  onMoveTask,
   onSave,
 }: TaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(emptyDraft)
@@ -127,6 +129,10 @@ export function TaskModal({
   const quickDate = (dueDate: string) => {
     setDraft((current) => ({ ...current, dueDate }))
     setShowDatePicker(false)
+  }
+  const changeTaskDate = (dueDate: string) => {
+    if (!task || task.source !== 'manual' || task.dueDate === dueDate) return
+    onMoveTask(task, dueDate)
   }
   const repeatPreset = repeatPresetFromDraft(draft.repeat)
   const changeRepeatPreset = (preset: RepeatPreset) => {
@@ -192,6 +198,35 @@ export function TaskModal({
                   {task.dueTime ? `, ${task.dueTime}` : ''}
                 </dd>
               </div>
+              {task.source === 'manual' ? (
+                <div className="details-date-control">
+                  <dt>Cambiar fecha</dt>
+                  <dd>
+                    <input
+                      aria-label="Cambiar fecha de la tarea"
+                      type="date"
+                      value={task.dueDate}
+                      onChange={(event) => changeTaskDate(event.target.value)}
+                    />
+                    <div className="details-date-shortcuts">
+                      <button
+                        className={task.dueDate === todayISO() ? 'active' : ''}
+                        type="button"
+                        onClick={() => changeTaskDate(todayISO())}
+                      >
+                        Hoy
+                      </button>
+                      <button
+                        className={task.dueDate === addDaysISO(1) ? 'active' : ''}
+                        type="button"
+                        onClick={() => changeTaskDate(addDaysISO(1))}
+                      >
+                        Mañana
+                      </button>
+                    </div>
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt>Prioridad</dt>
                 <dd>{task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}</dd>

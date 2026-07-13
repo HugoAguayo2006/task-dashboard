@@ -490,6 +490,7 @@
 .task-form input,
 .task-form select,
 .task-form textarea,
+.details-date-control input,
 .list-form input,
 .manager-row input {
   min-height: 40px;
@@ -504,7 +505,8 @@
 .filters-bar select,
 .task-form input,
 .task-form select,
-.task-form textarea {
+.task-form textarea,
+.details-date-control input {
   padding: 0 12px;
 }
 
@@ -2022,6 +2024,41 @@
 .details-panel dd {
   margin: 0;
   color: var(--text-strong);
+}
+
+.details-date-control dd {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  width: min(100%, 260px);
+}
+
+.details-date-control input {
+  width: 100%;
+}
+
+.details-date-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+
+.details-date-shortcuts button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-muted);
+  font-weight: 800;
+}
+
+.details-date-shortcuts button.active,
+.details-date-shortcuts button:hover {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  background: var(--surface-muted-strong);
 }
 
 .modal-actions {

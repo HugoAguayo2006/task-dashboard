@@ -63,7 +63,7 @@ function App() {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
   const [filters, setFilters] = useState<TaskFilters>(initialFilters)
   const [todayFilters, setTodayFilters] = useState<TodayFilters>(initialTodayFilters)
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -169,6 +169,10 @@ function App() {
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
     [canvasState.tasks, externalCalendarState.tasks, tasksState.tasks],
   )
+  const selectedTask = useMemo(
+    () => allTasks.find((task) => task.id === selectedTaskId) ?? null,
+    [allTasks, selectedTaskId],
+  )
 
   const boardTasks = useMemo(
     () =>
@@ -205,22 +209,22 @@ function App() {
   const handleDelete = (task: Task) => {
     if (task.source === 'canvas') {
       canvasState.hideTask(task.id)
-      setSelectedTask(null)
+      setSelectedTaskId(null)
       return
     }
     if (task.source === 'external-calendar') {
       externalCalendarState.hideTask(task.id)
-      setSelectedTask(null)
+      setSelectedTaskId(null)
       return
     }
     tasksState.deleteTask(task.id)
-    setSelectedTask(null)
+    setSelectedTaskId(null)
   }
 
   const handleDeleteSeries = (task: Task) => {
     if (!task.recurrenceId) return
     tasksState.deleteTaskSeries(task.recurrenceId)
-    setSelectedTask(null)
+    setSelectedTaskId(null)
     setIsCreatingTask(false)
     setEditingTask(null)
   }
@@ -353,7 +357,7 @@ function App() {
               setEditingTask(task)
               setIsCreatingTask(true)
             }}
-            onOpen={setSelectedTask}
+            onOpen={(task) => setSelectedTaskId(task.id)}
             onReorderLists={listsState.reorderLists}
           />
         ) : null}
@@ -374,7 +378,7 @@ function App() {
               setIsCreatingTask(true)
             }}
             onFiltersChange={setTodayFilters}
-            onOpen={setSelectedTask}
+            onOpen={(task) => setSelectedTaskId(task.id)}
           />
         ) : null}
 
@@ -384,7 +388,7 @@ function App() {
             tasks={calendarTasks}
             onComplete={handleComplete}
             onMoveTask={handleMoveTask}
-            onOpenTask={setSelectedTask}
+            onOpenTask={(task) => setSelectedTaskId(task.id)}
           />
         ) : null}
 
@@ -397,7 +401,7 @@ function App() {
               status: filters.status,
             })}
             onHide={canvasState.hideTask}
-            onOpen={setSelectedTask}
+            onOpen={(task) => setSelectedTaskId(task.id)}
             onReview={canvasState.markReviewed}
           />
         ) : null}
@@ -411,11 +415,12 @@ function App() {
           onClose={() => {
             setIsCreatingTask(false)
             setEditingTask(null)
-            setSelectedTask(null)
+            setSelectedTaskId(null)
           }}
           onComplete={handleComplete}
           onDelete={handleDelete}
           onDeleteSeries={handleDeleteSeries}
+          onMoveTask={handleMoveTask}
           onSave={(payload) => {
             if (editingTask) {
               tasksState.updateTask(editingTask.id, payload)
