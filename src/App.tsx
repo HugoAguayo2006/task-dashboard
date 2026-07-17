@@ -89,17 +89,19 @@ function App() {
       if (result.state) {
         const state = {
           ...result.state,
+          deletedSeedTaskIds: result.state.deletedSeedTaskIds ?? [],
           lists: mergeInitialLists(result.state.lists),
-          tasks: mergeInitialTasks(result.state.tasks),
+          tasks: mergeInitialTasks(result.state.tasks, result.state.deletedSeedTaskIds ?? []),
           updatedAt: new Date().toISOString(),
         }
         listsState.replaceLists(state.lists)
-        tasksState.replaceTasks(state.tasks)
+        tasksState.replaceTasks(state.tasks, state.deletedSeedTaskIds)
         lastSavedCloudState.current = JSON.stringify(result.state)
       } else {
         const state = {
+          deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
           lists: mergeInitialLists(listsState.lists),
-          tasks: mergeInitialTasks(tasksState.tasks),
+          tasks: mergeInitialTasks(tasksState.tasks, tasksState.deletedSeedTaskIds),
           updatedAt: new Date().toISOString(),
         }
         await saveSyncState(state)
@@ -136,6 +138,7 @@ function App() {
     }
 
     const state = {
+      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
       lists: listsState.lists,
       tasks: tasksState.tasks,
       updatedAt: new Date().toISOString(),
@@ -159,7 +162,7 @@ function App() {
     }, 900)
 
     return () => window.clearTimeout(timeout)
-  }, [listsState.lists, tasksState.tasks])
+  }, [listsState.lists, tasksState.deletedSeedTaskIds, tasksState.tasks])
 
   const allTasks = useMemo(
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
@@ -262,6 +265,7 @@ function App() {
         : currentTask,
     )
     const state = {
+      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
       lists: listsState.lists,
       tasks: nextTasks,
       updatedAt: timestamp,

@@ -1,6 +1,10 @@
 import { makeInitialTasks } from '../data/initialWorkspace'
 import type { Task } from '../types/task'
 
+export function isSeedTaskId(taskId: string) {
+  return taskId.startsWith('seed-')
+}
+
 function sameTags(firstTags: string[], secondTags: string[]) {
   return firstTags.length === secondTags.length && firstTags.every((tag, index) => tag === secondTags[index])
 }
@@ -47,12 +51,14 @@ function chooseTaskById(currentTask: Task, nextTask: Task, seedTask?: Task) {
   return nextTask.updatedAt > currentTask.updatedAt ? nextTask : currentTask
 }
 
-export function mergeInitialTasks(tasks: Task[]) {
+export function mergeInitialTasks(tasks: Task[], deletedSeedTaskIds: string[] = []) {
   const seedTasks = makeInitialTasks()
   const seedTasksById = new Map(seedTasks.map((task) => [task.id, task]))
+  const deletedSeedIds = new Set(deletedSeedTaskIds)
   const tasksById = new Map<string, Task>()
 
   for (const task of tasks) {
+    if (deletedSeedIds.has(task.id)) continue
     const currentTask = tasksById.get(task.id)
     tasksById.set(
       task.id,
@@ -62,6 +68,6 @@ export function mergeInitialTasks(tasks: Task[]) {
 
   const mergedTasks = [...tasksById.values()]
   const existingIds = new Set(mergedTasks.map((task) => task.id))
-  const missingTasks = seedTasks.filter((task) => !existingIds.has(task.id))
+  const missingTasks = seedTasks.filter((task) => !existingIds.has(task.id) && !deletedSeedIds.has(task.id))
   return missingTasks.length ? [...missingTasks, ...mergedTasks] : mergedTasks
 }

@@ -3,7 +3,7 @@ import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft } from '../types/task'
 import { makeInitialTasks } from '../data/initialWorkspace'
 import { addToISODate } from '../utils/dates'
-import { mergeInitialTasks } from '../utils/mergeTasks'
+import { isSeedTaskId, mergeInitialTasks } from '../utils/mergeTasks'
 import { readStorage, writeStorage } from '../services/storageService'
 
 const FOREVER_RECURRENCE_WINDOW = 180
@@ -162,8 +162,13 @@ function normalizeForeverRecurrences(tasks: Task[]) {
 }
 
 export function useTasks(lists: TaskList[]) {
+  const [deletedSeedTaskIds, setDeletedSeedTaskIds] = useState<string[]>(() =>
+    readStorage('deleted-seed-task-ids', []),
+  )
   const [tasks, setTasks] = useState<Task[]>(() =>
-    normalizeForeverRecurrences(mergeInitialTasks(readStorage('tasks', makeInitialTasks()))),
+    normalizeForeverRecurrences(
+      mergeInitialTasks(readStorage('tasks', makeInitialTasks()), readStorage('deleted-seed-task-ids', [])),
+    ),
   )
 
   const listColors = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
@@ -173,8 +178,12 @@ export function useTasks(lists: TaskList[]) {
   }, [tasks])
 
   useEffect(() => {
-    setTasks((current) => mergeInitialTasks(current))
-  }, [])
+    writeStorage('deleted-seed-task-ids', deletedSeedTaskIds)
+  }, [deletedSeedTaskIds])
+
+  useEffect(() => {
+    setTasks((current) => mergeInitialTasks(current, deletedSeedTaskIds))
+  }, [deletedSeedTaskIds])
 
   useEffect(() => {
     setTasks((current) =>
@@ -278,15 +287,28 @@ export function useTasks(lists: TaskList[]) {
 
   const deleteTask = (id: string) => {
     setTasks((current) => current.filter((task) => task.id !== id))
+    if (isSeedTaskId(id)) {
+      setDeletedSeedTaskIds((current) => (current.includes(id) ? current : [...current, id]))
+    }
   }
 
   const deleteTaskSeries = (recurrenceId: string) => {
     setTasks((current) => current.filter((task) => task.recurrenceId !== recurrenceId))
   }
 
-  const replaceTasks = (nextTasks: Task[]) => {
-    setTasks(normalizeForeverRecurrences(mergeInitialTasks(nextTasks)))
+  const replaceTasks = (nextTasks: Task[], nextDeletedSeedTaskIds = deletedSeedTaskIds) => {
+    setTasks(normalizeForeverRecurrences(mergeInitialTasks(nextTasks, nextDeletedSeedTaskIds)))
+    setDeletedSeedTaskIds(nextDeletedSeedTaskIds)
   }
 
-  return { createTask, deleteTask, deleteTaskSeries, replaceTasks, tasks, toggleTask, updateTask }
+  return {
+    createTask,
+    deleteTask,
+    deleteTaskSeries,
+    deletedSeedTaskIds,
+    replaceTasks,
+    tasks,
+    toggleTask,
+    updateTask,
+  }
 }

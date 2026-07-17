@@ -12,6 +12,7 @@ type VercelResponse = {
 }
 
 type SyncState = {
+  deletedSeedTaskIds?: string[]
   lists: unknown[]
   tasks: unknown[]
   updatedAt: string
@@ -20,7 +21,16 @@ type SyncState = {
 function isSyncState(value: unknown): value is SyncState {
   if (!value || typeof value !== 'object') return false
   const state = value as Partial<SyncState>
-  return Array.isArray(state.lists) && Array.isArray(state.tasks) && typeof state.updatedAt === 'string'
+  const hasDeletedSeedTaskIds =
+    state.deletedSeedTaskIds === undefined ||
+    (Array.isArray(state.deletedSeedTaskIds) &&
+      state.deletedSeedTaskIds.every((taskId) => typeof taskId === 'string'))
+  return (
+    Array.isArray(state.lists) &&
+    Array.isArray(state.tasks) &&
+    typeof state.updatedAt === 'string' &&
+    hasDeletedSeedTaskIds
+  )
 }
 
 function config() {
