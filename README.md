@@ -82,6 +82,22 @@ Outlook|https://outlook.office365.com/owa/calendar/.../calendar.ics
 
 Esos links son secretos porque dan lectura a tu calendario. No los pongas como `VITE_*` ni los subas a Git.
 
+## Calendario de iPhone
+
+Chalendar tambien puede publicar tus tareas manuales como un calendario `.ics` para suscribirlo en la app Calendario de iPhone:
+
+```text
+https://task-dashboard-flame-beta.vercel.app/api/calendar/tasks.ics
+```
+
+Si configuras `CHALENDAR_ICS_TOKEN` en Vercel, usa la URL con token:
+
+```text
+https://task-dashboard-flame-beta.vercel.app/api/calendar/tasks.ics?token=tu_token
+```
+
+En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agregar calendario suscrito. Pega la URL y guarda. El calendario es de solo lectura: los cambios hechos en Chalendar aparecen en iPhone cuando la app Calendario actualiza la suscripción.
+
 ## Funciones
 
 - Dashboard con tareas próximas, vencidas, manuales, Canvas y resumen por lista.
