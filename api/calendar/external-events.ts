@@ -84,7 +84,9 @@ function parseFeeds(value?: string) {
 
   if (rawValue.startsWith('[')) {
     const parsed = JSON.parse(rawValue) as CalendarFeed[]
-    return parsed.filter((feed) => feed.name?.trim() && feed.url?.trim())
+    return parsed
+      .filter((feed) => feed.name?.trim() && feed.url?.trim())
+      .map((feed) => ({ ...feed, url: normalizeFeedUrl(feed.url) }))
   }
 
   return rawValue
@@ -95,10 +97,14 @@ function parseFeeds(value?: string) {
       if (!url) return null
       return {
         name: urlParts.length ? nameOrUrl : `Calendario ${index + 1}`,
-        url,
+        url: normalizeFeedUrl(url),
       }
     })
     .filter((feed): feed is CalendarFeed => Boolean(feed))
+}
+
+function normalizeFeedUrl(url: string) {
+  return url.trim().replace(/^webcal:\/\//i, 'https://')
 }
 
 function unfoldIcsLines(text: string) {
@@ -293,7 +299,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const results = await Promise.all(
       feeds.map(async (feed) => {
         const calendarResponse = await fetch(feed.url, {
-          headers: { Accept: 'text/calendar,text/plain,*/*' },
+          headers: {
+            Accept: 'text/calendar,text/plain,*/*',
+            'User-Agent': 'Chalendar/1.0 Calendar Sync',
+          },
         })
 
         if (!calendarResponse.ok) {
@@ -303,12 +312,14 @@ export default async function handler(request: VercelRequest, response: VercelRe
               status: calendarResponse.status,
             },
             events: [],
+            ok: false,
           }
         }
 
         const text = await calendarResponse.text()
         return {
           events: parseIcs(text).flatMap((event) => expandEvent(event, feed, rangeStart, rangeEnd)),
+          ok: true,
         }
       }),
     )
@@ -318,7 +329,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       .sort((a, b) => a.start.localeCompare(b.start))
     const errors = results.flatMap((result) => (result.error ? [result.error] : []))
 
-    if (!events.length && errors.length) {
+    if (!events.length && errors.length === results.length) {
       response.status(502).json({
         code: 'external-calendar-error',
         error: 'No se pudieron consultar los calendarios externos.',
