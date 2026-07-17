@@ -74,6 +74,7 @@ function App() {
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
   const lastSavedCloudState = useRef('')
+  const skipNextAutosync = useRef(false)
   const workspaceRef = useRef<HTMLElement | null>(null)
 
   const listsState = useLists()
@@ -138,6 +139,10 @@ function App() {
 
   useEffect(() => {
     if (!syncReady.current || syncDisabled.current) return
+    if (skipNextAutosync.current) {
+      skipNextAutosync.current = false
+      return
+    }
 
     const state = {
       lists: listsState.lists,
@@ -248,6 +253,55 @@ function App() {
         forever: false,
       },
     })
+  }
+
+  const handleSaveTaskDate = async (task: Task, dueDate: string) => {
+    if (task.source !== 'manual' || task.dueDate === dueDate) {
+      return syncDisabled.current ? 'local' : 'synced'
+    }
+
+    const timestamp = new Date().toISOString()
+    const nextTasks = tasksState.tasks.map((currentTask) =>
+      currentTask.id === task.id
+        ? {
+            ...currentTask,
+            dueDate,
+            updatedAt: timestamp,
+          }
+        : currentTask,
+    )
+    const state = {
+      lists: listsState.lists,
+      tasks: nextTasks,
+      updatedAt: timestamp,
+    }
+
+    if (syncDisabled.current) {
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+      setSyncStatus('local')
+      return 'local'
+    }
+
+    setSyncStatus('saving')
+    try {
+      const result = await saveSyncState(state)
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+
+      if (result.disabled) {
+        syncDisabled.current = true
+        setSyncStatus('local')
+        return 'local'
+      }
+
+      lastSavedCloudState.current = JSON.stringify(state)
+      setSyncStatus('synced')
+      return 'synced'
+    } catch (error) {
+      setSyncStatus('error')
+      throw error
+    }
   }
 
   return (
@@ -420,7 +474,7 @@ function App() {
           onComplete={handleComplete}
           onDelete={handleDelete}
           onDeleteSeries={handleDeleteSeries}
-          onMoveTask={handleMoveTask}
+          onSaveTaskDate={handleSaveTaskDate}
           onSave={(payload) => {
             if (editingTask) {
               tasksState.updateTask(editingTask.id, payload)

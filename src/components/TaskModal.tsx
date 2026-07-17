@@ -1,10 +1,12 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
 import { readableColor, visibleOnLightColor } from '../utils/colors'
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
+type DateSaveResult = 'synced' | 'local'
+type DateSaveStatus = 'idle' | 'saving' | DateSaveResult | 'error'
 
 type TaskModalProps = {
   lists: TaskList[]
@@ -14,7 +16,7 @@ type TaskModalProps = {
   onComplete: (task: Task) => void
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
-  onMoveTask: (task: Task, dueDate: string) => void
+  onSaveTaskDate: (task: Task, dueDate: string) => Promise<DateSaveResult>
   onSave: (draft: TaskDraft) => void
 }
 
@@ -81,7 +83,7 @@ export function TaskModal({
   onComplete,
   onDelete,
   onDeleteSeries,
-  onMoveTask,
+  onSaveTaskDate,
   onSave,
 }: TaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(emptyDraft)
@@ -90,6 +92,8 @@ export function TaskModal({
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [occurrencesText, setOccurrencesText] = useState(String(emptyDraft.repeat.occurrences))
+  const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
+  const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
 
   useEffect(() => {
     setDraft(
@@ -112,15 +116,28 @@ export function TaskModal({
   }, [lists, task])
 
   useEffect(() => {
+    setDateSaveStatus('idle')
+  }, [task?.id])
+
+  useEffect(() => {
+    setDetailDueDate(task?.dueDate ?? '')
+  }, [task?.id, task?.dueDate])
+
+  const closeModal = useCallback(() => {
+    if (dateSaveStatus === 'saving') return
+    onClose()
+  }, [dateSaveStatus, onClose])
+
+  useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose()
+        closeModal()
       }
     }
 
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+  }, [closeModal])
 
   const listName =
     task?.source === 'external-calendar'
@@ -131,8 +148,18 @@ export function TaskModal({
     setShowDatePicker(false)
   }
   const changeTaskDate = (dueDate: string) => {
-    if (!task || task.source !== 'manual' || task.dueDate === dueDate) return
-    onMoveTask(task, dueDate)
+    setDetailDueDate(dueDate)
+    setDateSaveStatus('idle')
+  }
+  const saveTaskDate = async () => {
+    if (!task || task.source !== 'manual' || !detailDueDate || detailDueDate === task.dueDate) return
+    setDateSaveStatus('saving')
+    try {
+      const result = await onSaveTaskDate(task, detailDueDate)
+      setDateSaveStatus(result)
+    } catch {
+      setDateSaveStatus('error')
+    }
   }
   const repeatPreset = repeatPresetFromDraft(draft.repeat)
   const changeRepeatPreset = (preset: RepeatPreset) => {
@@ -167,7 +194,7 @@ export function TaskModal({
     : undefined
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation" onClick={closeModal}>
       <section
         className="task-modal"
         role="dialog"
@@ -175,7 +202,13 @@ export function TaskModal({
         aria-label="Detalle de tarea"
         onClick={(event) => event.stopPropagation()}
       >
-        <button aria-label="Cerrar modal" className="modal-close" type="button" onClick={onClose}>
+        <button
+          aria-label="Cerrar modal"
+          className="modal-close"
+          disabled={dateSaveStatus === 'saving'}
+          type="button"
+          onClick={closeModal}
+        >
           ×
         </button>
 
@@ -204,26 +237,50 @@ export function TaskModal({
                   <dd>
                     <input
                       aria-label="Cambiar fecha de la tarea"
+                      disabled={dateSaveStatus === 'saving'}
                       type="date"
-                      value={task.dueDate}
+                      value={detailDueDate}
                       onChange={(event) => changeTaskDate(event.target.value)}
                     />
                     <div className="details-date-shortcuts">
                       <button
-                        className={task.dueDate === todayISO() ? 'active' : ''}
+                        className={detailDueDate === todayISO() ? 'active' : ''}
+                        disabled={dateSaveStatus === 'saving'}
                         type="button"
                         onClick={() => changeTaskDate(todayISO())}
                       >
                         Hoy
                       </button>
                       <button
-                        className={task.dueDate === addDaysISO(1) ? 'active' : ''}
+                        className={detailDueDate === addDaysISO(1) ? 'active' : ''}
+                        disabled={dateSaveStatus === 'saving'}
                         type="button"
                         onClick={() => changeTaskDate(addDaysISO(1))}
                       >
                         Mañana
                       </button>
                     </div>
+                    <button
+                      className="save-date-button"
+                      disabled={
+                        dateSaveStatus === 'saving' || !detailDueDate || detailDueDate === task.dueDate
+                      }
+                      type="button"
+                      onClick={saveTaskDate}
+                    >
+                      {dateSaveStatus === 'saving' ? 'Guardando...' : 'Guardar fecha'}
+                    </button>
+                    {dateSaveStatus !== 'idle' ? (
+                      <p className={`date-save-message ${dateSaveStatus}`}>
+                        {dateSaveStatus === 'saving'
+                          ? 'Sincronizando con la nube...'
+                          : dateSaveStatus === 'synced'
+                            ? 'Sincronizado en la nube.'
+                            : dateSaveStatus === 'local'
+                              ? 'Guardado localmente. La nube no está disponible.'
+                              : 'No se pudo guardar. Intenta de nuevo.'}
+                      </p>
+                    ) : null}
                   </dd>
                 </div>
               ) : null}
