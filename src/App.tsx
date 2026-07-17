@@ -71,7 +71,7 @@ function App() {
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
   const canvasState = useCanvasTasks()
-  const externalCalendarState = useExternalCalendarTasks()
+  const externalCalendarState = useExternalCalendarTasks(listsState.lists)
 
   const loadCloudState = async () => {
     setSyncStatus('loading')

@@ -222,6 +222,31 @@ function addFrequency(date: Date, frequency: string, interval: number) {
   return next
 }
 
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function dayDiff(startDate: Date, endDate: Date) {
+  const start = new Date(`${localISODate(startDate)}T12:00:00`)
+  const end = new Date(`${localISODate(endDate)}T12:00:00`)
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000)
+}
+
+function spanDates(startDate: Date, endDate: Date | undefined, allDay: boolean) {
+  if (!endDate) return [{ date: startDate, multiDay: false, spanDayIndex: 0 }]
+
+  const exclusiveAllDayOffset = allDay && endDate > startDate ? 1 : 0
+  const spanLength = Math.max(0, dayDiff(startDate, endDate) - exclusiveAllDayOffset)
+
+  return Array.from({ length: spanLength + 1 }, (_, spanDayIndex) => ({
+    date: addDays(startDate, spanDayIndex),
+    multiDay: spanLength > 0,
+    spanDayIndex,
+  }))
+}
+
 function recurrenceUnitFromFrequency(frequency: string) {
   if (frequency === 'DAILY') return 'day'
   if (frequency === 'WEEKLY') return 'week'
@@ -234,6 +259,7 @@ function toCalendarEvent(
   feed: CalendarFeed,
   occurrenceDate: Date,
   allDay: boolean,
+  spanDayIndex = 0,
   recurrence?: {
     index: number
     interval: number
@@ -242,8 +268,10 @@ function toCalendarEvent(
 ): CalendarEvent {
   const baseId = rawEvent.uid ?? `${feed.name}-${rawEvent.summary}-${rawEvent.dtstart}`
   const recurrenceId = `${hash(feed.url)}-${hash(baseId)}`
+  const baseEventId = recurrence ? `${recurrenceId}-${recurrence.index}` : recurrenceId
+  const multiDayIdSuffix = spanDayIndex ? `-day-${spanDayIndex}` : ''
   return {
-    id: recurrence ? `${recurrenceId}-${recurrence.index}` : recurrenceId,
+    id: `${baseEventId}${multiDayIdSuffix}`,
     calendarName: feed.name,
     title: rawEvent.summary || 'Reunión',
     description: rawEvent.description,
@@ -265,14 +293,32 @@ function toCalendarEvent(
 function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date, rangeEnd: Date) {
   const parsedStart = rawEvent.dtstart ? parseIcsDate(rawEvent.dtstart) : null
   if (!parsedStart) return []
+  const parsedEnd = rawEvent.dtend ? parseIcsDate(rawEvent.dtend) : null
+
+  const expandSpan = (
+    occurrenceStart: Date,
+    recurrence?: {
+      index: number
+      interval: number
+      unit: 'day' | 'week' | 'month'
+    },
+  ) => {
+    const occurrenceEnd = parsedEnd
+      ? addDays(occurrenceStart, dayDiff(parsedStart.date, parsedEnd.date))
+      : undefined
+
+    return spanDates(occurrenceStart, occurrenceEnd, parsedStart.allDay)
+      .filter(({ date }) => date >= rangeStart && date <= rangeEnd)
+      .map(({ date, multiDay, spanDayIndex }) =>
+        toCalendarEvent(rawEvent, feed, date, parsedStart.allDay || multiDay, spanDayIndex, recurrence),
+      )
+  }
 
   const rrule = parseRrule(rawEvent.rrule)
   const frequency = rrule.FREQ
   const recurrenceUnit = frequency ? recurrenceUnitFromFrequency(frequency) : null
   if (!frequency || !recurrenceUnit) {
-    return parsedStart.date >= rangeStart && parsedStart.date <= rangeEnd
-      ? [toCalendarEvent(rawEvent, feed, parsedStart.date, parsedStart.allDay)]
-      : []
+    return expandSpan(parsedStart.date)
   }
 
   const interval = Math.max(1, Number(rrule.INTERVAL) || 1)
@@ -284,15 +330,13 @@ function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date
   for (let index = 0; index < count && events.length < 200; index += 1) {
     if (until && cursor > until) break
     if (cursor > rangeEnd) break
-    if (cursor >= rangeStart) {
-      events.push(
-        toCalendarEvent(rawEvent, feed, cursor, parsedStart.allDay, {
-          index,
-          interval,
-          unit: recurrenceUnit,
-        }),
-      )
-    }
+    events.push(
+      ...expandSpan(cursor, {
+        index,
+        interval,
+        unit: recurrenceUnit,
+      }),
+    )
     cursor = addFrequency(cursor, frequency, interval)
   }
 

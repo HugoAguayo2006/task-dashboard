@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchExternalCalendarEvents } from '../services/externalCalendarApi'
 import { readStorage, writeStorage } from '../services/storageService'
 import type { ExternalCalendarStatus } from '../types/externalCalendar'
+import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
 import { addDaysISO, todayISO } from '../utils/dates'
 
@@ -45,7 +46,7 @@ function getCalendarList(calendarName: string) {
   return fallbackCalendarList
 }
 
-export function useExternalCalendarTasks() {
+export function useExternalCalendarTasks(lists: TaskList[]) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [status, setStatus] = useState<ExternalCalendarStatus>('idle')
   const [localState, setLocalState] = useState<ExternalCalendarLocalState>(() =>
@@ -53,6 +54,7 @@ export function useExternalCalendarTasks() {
   )
 
   const hiddenSet = useMemo(() => new Set(localState.hiddenIds), [localState.hiddenIds])
+  const listColorById = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
   const reviewedSet = useMemo(() => new Set(localState.reviewedIds), [localState.reviewedIds])
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export function useExternalCalendarTasks() {
             dueDate,
             dueTime,
             listId: calendarList.id,
-            color: event.color ?? calendarList.color,
+            color: listColorById.get(calendarList.id) ?? event.color ?? calendarList.color,
             completed: reviewedSet.has(id),
             priority: 'medium',
             tags: [event.calendarName],
@@ -107,7 +109,7 @@ export function useExternalCalendarTasks() {
       setTasks([])
       setStatus(error instanceof Error && error.name === 'missing-feeds' ? 'missing-feeds' : 'error')
     }
-  }, [hiddenSet, reviewedSet])
+  }, [hiddenSet, listColorById, reviewedSet])
 
   useEffect(() => {
     refresh()
