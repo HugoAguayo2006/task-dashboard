@@ -9,6 +9,12 @@ export type ExternalCalendarEvent = {
   end?: string
   allDay?: boolean
   color?: string
+  recurrenceForever?: boolean
+  recurrenceId?: string
+  recurrenceIndex?: number
+  recurrenceInterval?: number
+  recurrenceTotal?: number
+  recurrenceUnit?: 'day' | 'week' | 'month'
 }
 
 export type ExternalCalendarStatus =

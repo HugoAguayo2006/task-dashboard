@@ -26,6 +26,12 @@ type CalendarEvent = {
   end?: string
   allDay?: boolean
   color?: string
+  recurrenceForever?: boolean
+  recurrenceId?: string
+  recurrenceIndex?: number
+  recurrenceInterval?: number
+  recurrenceTotal?: number
+  recurrenceUnit?: 'day' | 'week' | 'month'
 }
 
 type RawIcsEvent = {
@@ -216,16 +222,28 @@ function addFrequency(date: Date, frequency: string, interval: number) {
   return next
 }
 
+function recurrenceUnitFromFrequency(frequency: string) {
+  if (frequency === 'DAILY') return 'day'
+  if (frequency === 'WEEKLY') return 'week'
+  if (frequency === 'MONTHLY') return 'month'
+  return null
+}
+
 function toCalendarEvent(
   rawEvent: RawIcsEvent,
   feed: CalendarFeed,
   occurrenceDate: Date,
   allDay: boolean,
-  suffix = '',
+  recurrence?: {
+    index: number
+    interval: number
+    unit: 'day' | 'week' | 'month'
+  },
 ): CalendarEvent {
   const baseId = rawEvent.uid ?? `${feed.name}-${rawEvent.summary}-${rawEvent.dtstart}`
+  const recurrenceId = `${hash(feed.url)}-${hash(baseId)}`
   return {
-    id: `${hash(feed.url)}-${hash(baseId)}${suffix}`,
+    id: recurrence ? `${recurrenceId}-${recurrence.index}` : recurrenceId,
     calendarName: feed.name,
     title: rawEvent.summary || 'Reunión',
     description: rawEvent.description,
@@ -235,6 +253,12 @@ function toCalendarEvent(
     end: rawEvent.dtend,
     allDay,
     color: feed.color,
+    recurrenceForever: recurrence ? true : undefined,
+    recurrenceId: recurrence ? recurrenceId : undefined,
+    recurrenceIndex: recurrence ? recurrence.index + 1 : undefined,
+    recurrenceInterval: recurrence?.interval,
+    recurrenceTotal: recurrence ? 180 : undefined,
+    recurrenceUnit: recurrence?.unit,
   }
 }
 
@@ -244,7 +268,8 @@ function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date
 
   const rrule = parseRrule(rawEvent.rrule)
   const frequency = rrule.FREQ
-  if (!frequency || !['DAILY', 'WEEKLY', 'MONTHLY'].includes(frequency)) {
+  const recurrenceUnit = frequency ? recurrenceUnitFromFrequency(frequency) : null
+  if (!frequency || !recurrenceUnit) {
     return parsedStart.date >= rangeStart && parsedStart.date <= rangeEnd
       ? [toCalendarEvent(rawEvent, feed, parsedStart.date, parsedStart.allDay)]
       : []
@@ -260,7 +285,13 @@ function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date
     if (until && cursor > until) break
     if (cursor > rangeEnd) break
     if (cursor >= rangeStart) {
-      events.push(toCalendarEvent(rawEvent, feed, cursor, parsedStart.allDay, `-${index}`))
+      events.push(
+        toCalendarEvent(rawEvent, feed, cursor, parsedStart.allDay, {
+          index,
+          interval,
+          unit: recurrenceUnit,
+        }),
+      )
     }
     cursor = addFrequency(cursor, frequency, interval)
   }
