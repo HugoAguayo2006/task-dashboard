@@ -3,6 +3,7 @@ import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft } from '../types/task'
 import { makeInitialTasks } from '../data/initialWorkspace'
 import { addToISODate } from '../utils/dates'
+import { mergeInitialTasks } from '../utils/mergeTasks'
 import { readStorage, writeStorage } from '../services/storageService'
 
 const FOREVER_RECURRENCE_WINDOW = 180
@@ -162,7 +163,7 @@ function normalizeForeverRecurrences(tasks: Task[]) {
 
 export function useTasks(lists: TaskList[]) {
   const [tasks, setTasks] = useState<Task[]>(() =>
-    normalizeForeverRecurrences(readStorage('tasks', makeInitialTasks())),
+    normalizeForeverRecurrences(mergeInitialTasks(readStorage('tasks', makeInitialTasks()))),
   )
 
   const listColors = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
@@ -172,15 +173,7 @@ export function useTasks(lists: TaskList[]) {
   }, [tasks])
 
   useEffect(() => {
-    setTasks((current) => {
-      const taskKeys = new Set(
-        current.map((task) => `${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
-      )
-      const missingTasks = makeInitialTasks().filter(
-        (task) => !taskKeys.has(`${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
-      )
-      return missingTasks.length ? [...missingTasks, ...current] : current
-    })
+    setTasks((current) => mergeInitialTasks(current))
   }, [])
 
   useEffect(() => {
@@ -292,7 +285,7 @@ export function useTasks(lists: TaskList[]) {
   }
 
   const replaceTasks = (nextTasks: Task[]) => {
-    setTasks(normalizeForeverRecurrences(nextTasks))
+    setTasks(normalizeForeverRecurrences(mergeInitialTasks(nextTasks)))
   }
 
   return { createTask, deleteTask, deleteTaskSeries, replaceTasks, tasks, toggleTask, updateTask }

@@ -37,6 +37,15 @@ function getHeader(request: VercelRequest, name: string) {
   return Array.isArray(value) ? value[0] : value
 }
 
+function isLocalOrigin(origin: string) {
+  try {
+    const { hostname, protocol } = new URL(origin)
+    return protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1')
+  } catch {
+    return false
+  }
+}
+
 function applyCors(request: VercelRequest, response: VercelResponse) {
   const origin = getHeader(request, 'origin')
   const allowedOrigins = (process.env.CHALENDAR_ALLOWED_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173')
@@ -44,7 +53,7 @@ function applyCors(request: VercelRequest, response: VercelResponse) {
     .map((value) => value.trim())
     .filter(Boolean)
 
-  if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+  if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalOrigin(origin))) {
     response.setHeader('Access-Control-Allow-Origin', allowedOrigins.includes('*') ? '*' : origin)
     response.setHeader('Vary', 'Origin')
   }

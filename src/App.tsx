@@ -14,11 +14,12 @@ import { useCanvasTasks } from './hooks/useCanvasTasks'
 import { useExternalCalendarTasks } from './hooks/useExternalCalendarTasks'
 import { useLists } from './hooks/useLists'
 import { useTasks } from './hooks/useTasks'
-import { initialLists, makeInitialTasks } from './data/initialWorkspace'
+import { initialLists } from './data/initialWorkspace'
 import { fetchSyncState, saveSyncState } from './services/syncApi'
 import type { SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters } from './types/task'
 import { filterTasks, sortTasksByDueDate } from './utils/dates'
+import { mergeInitialTasks } from './utils/mergeTasks'
 
 const initialFilters: TaskFilters = {
   query: '',
@@ -46,16 +47,6 @@ function mergeInitialLists(lists: typeof initialLists) {
   const currentIds = new Set(lists.map((list) => list.id))
   const missingLists = initialLists.filter((list) => !currentIds.has(list.id))
   return missingLists.length ? [...lists, ...missingLists] : lists
-}
-
-function mergeInitialTasks(tasks: Task[]) {
-  const taskKeys = new Set(
-    tasks.map((task) => `${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
-  )
-  const missingTasks = makeInitialTasks().filter(
-    (task) => !taskKeys.has(`${task.listId}|${task.title}|${task.dueDate}|${task.description ?? ''}`),
-  )
-  return missingTasks.length ? [...missingTasks, ...tasks] : tasks
 }
 
 function App() {
