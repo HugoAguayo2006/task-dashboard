@@ -141,7 +141,7 @@ export function TaskModal({
 
   const listName =
     task?.source === 'external-calendar'
-      ? task.externalCalendarName ?? task.contextName ?? 'Gmail/Outlook'
+      ? task.externalCalendarName ?? task.contextName ?? 'Calendario'
       : lists.find((list) => list.id === task?.listId)?.name ?? task?.contextName ?? 'Canvas'
   const quickDate = (dueDate: string) => {
     setDraft((current) => ({ ...current, dueDate }))

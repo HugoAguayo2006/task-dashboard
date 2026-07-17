@@ -18,6 +18,7 @@ const initialLocalState: ExternalCalendarLocalState = {
 const refreshIntervalMs = 5 * 60 * 1000
 const externalCalendarLists = {
   gmail: { color: '#ea4335', id: 'gmail' },
+  iphone: { color: '#34c759', id: 'iphone-calendar' },
   outlook: { color: '#0078d4', id: 'outlook' },
 } as const
 const fallbackCalendarList = { color: '#38bdf8', id: 'external-calendar' }
@@ -33,6 +34,13 @@ function getCalendarList(calendarName: string) {
   }
   if (normalizedName.includes('outlook') || normalizedName.includes('microsoft')) {
     return externalCalendarLists.outlook
+  }
+  if (
+    normalizedName.includes('iphone') ||
+    normalizedName.includes('icloud') ||
+    normalizedName.includes('apple')
+  ) {
+    return externalCalendarLists.iphone
   }
   return fallbackCalendarList
 }

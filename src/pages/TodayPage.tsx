@@ -137,7 +137,7 @@ export function TodayPage({
             <option value="all">Todas las fuentes</option>
             <option value="manual">Manual</option>
             <option value="canvas">Canvas</option>
-            <option value="external-calendar">Gmail/Outlook</option>
+            <option value="external-calendar">Calendarios</option>
           </select>
           <select
             aria-label="Filtrar por estado"

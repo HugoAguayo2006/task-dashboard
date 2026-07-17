@@ -106,5 +106,5 @@ En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agreg
 - Vista calendario mensual, semanal y agenda.
 - Filtros por lista, fuente, estado, prioridad, texto, vencidas y completadas.
 - Tareas de Canvas mezcladas con las manuales, con opción local para revisar u ocultar.
-- Reuniones de Gmail/Outlook mezcladas con el calendario, con opcion local para revisar u ocultar.
+- Reuniones de Gmail, Outlook e iPhone mezcladas con el calendario, con opcion local para revisar u ocultar.
 - Diseño oscuro, responsivo y preparado para Vercel.

@@ -6,6 +6,12 @@ export const initialLists: TaskList[] = [
   { id: 'gmail', name: 'Gmail', color: '#ea4335', createdAt: '2026-07-07T12:00:00.000Z' },
   { id: 'outlook', name: 'Outlook', color: '#0078d4', createdAt: '2026-07-07T12:00:00.000Z' },
   {
+    id: 'iphone-calendar',
+    name: 'Calendario iPhone',
+    color: '#34c759',
+    createdAt: '2026-07-17T12:00:00.000Z',
+  },
+  {
     id: 'colegio-colonial',
     name: 'Colegio Colonial',
     color: '#a855f7',

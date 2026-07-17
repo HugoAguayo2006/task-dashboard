@@ -58,7 +58,7 @@ export function TaskCard({
             {task.source === 'canvas'
               ? 'Canvas'
               : task.source === 'external-calendar'
-                ? 'Gmail/Outlook'
+                ? task.externalCalendarName ?? 'Calendario'
                 : 'Manual'}
           </span>
           {task.tags.map((tag) => (

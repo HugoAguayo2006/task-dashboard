@@ -7,11 +7,11 @@ type ExternalCalendarStatusProps = {
 
 const labels: Record<ExternalCalendarStatusValue, string> = {
   idle: 'Calendarios externos listos',
-  loading: 'Cargando Gmail/Outlook...',
-  ready: 'Gmail/Outlook sincronizado',
+  loading: 'Cargando calendarios...',
+  ready: 'Calendarios sincronizados',
   'missing-feeds': 'Falta CHALENDAR_EXTERNAL_CALENDAR_FEEDS',
   empty: 'No hay reuniones externas en este rango',
-  error: 'No se pudo conectar con Gmail/Outlook',
+  error: 'No se pudo conectar con calendarios',
 }
 
 export function ExternalCalendarStatus({ status, onRefresh }: ExternalCalendarStatusProps) {
