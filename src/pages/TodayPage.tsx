@@ -67,10 +67,14 @@ export function TodayPage({
 
   const filteredTasks = useMemo(() => {
     const baseTasks = filterTasks(tasks, filters)
-    return sortTasksByDueDate(baseTasks.filter((task) => task.dueDate === todayISO()))
-  }, [filters, tasks])
+    return sortTasksByDueDate(
+      baseTasks.filter((task) => task.dueDate === today || (!task.completed && task.dueDate && task.dueDate < today)),
+    )
+  }, [filters, tasks, today])
 
-  const todayTasks = getNextTaskPerRecurringSeries(filteredTasks)
+  const visibleTasks = getNextTaskPerRecurringSeries(filteredTasks)
+  const todayTasks = visibleTasks.filter((task) => task.dueDate === today)
+  const overdueTasks = visibleTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today)
   const pendingTodayTasks = tasks.filter((task) => !task.completed && task.dueDate === today)
   const completedTodayTasks = tasks.filter((task) => task.completed && task.dueDate === today)
   const highPriorityTodayTasks = pendingTodayTasks.filter((task) => task.priority === 'high')
@@ -174,12 +178,25 @@ export function TodayPage({
             onEdit={onEdit}
             onOpen={onOpen}
           />
-        ) : (
+        ) : null}
+        {overdueTasks.length ? (
+          <TodayGroup
+            title="Tareas atrasadas"
+            subtitle={`${countPending(overdueTasks)} pendientes de días anteriores`}
+            tone="warning"
+            tasks={overdueTasks}
+            onComplete={onComplete}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onOpen={onOpen}
+          />
+        ) : null}
+        {!todayTasks.length && !overdueTasks.length ? (
           <div className="today-empty">
             <strong>No hay tareas con estos filtros.</strong>
             <span>Cambia los filtros o crea una tarea para hoy.</span>
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   )
