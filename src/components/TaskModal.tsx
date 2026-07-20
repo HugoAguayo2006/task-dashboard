@@ -16,6 +16,7 @@ type TaskModalProps = {
   onComplete: (task: Task) => void
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
+  onEdit: (task: Task) => void
   onSaveTaskDate: (task: Task, dueDate: string) => Promise<DateSaveResult>
   onSave: (draft: TaskDraft) => void
 }
@@ -83,6 +84,7 @@ export function TaskModal({
   onComplete,
   onDelete,
   onDeleteSeries,
+  onEdit,
   onSaveTaskDate,
   onSave,
 }: TaskModalProps) {
@@ -310,6 +312,11 @@ export function TaskModal({
               </a>
             ) : null}
             <div className="modal-actions">
+              {task.source === 'manual' ? (
+                <button className="edit-button" type="button" onClick={() => onEdit(task)}>
+                  Editar título o descripción
+                </button>
+              ) : null}
               <button className="state-button" type="button" onClick={() => onComplete(task)}>
                 {task.source === 'manual'
                   ? 'Cambiar estado'

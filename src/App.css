@@ -2123,6 +2123,16 @@
   box-shadow: 0 12px 26px rgba(96, 165, 250, 0.22);
 }
 
+.edit-button {
+  color: var(--text-strong);
+  background: var(--surface-muted-strong);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.edit-button:hover {
+  background: color-mix(in srgb, var(--surface-muted-strong) 82%, var(--accent));
+}
+
 .state-button:hover {
   background: linear-gradient(135deg, #bfdbfe, #a5f3fc);
 }

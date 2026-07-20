@@ -477,6 +477,11 @@ function App() {
           onComplete={handleComplete}
           onDelete={handleDelete}
           onDeleteSeries={handleDeleteSeries}
+          onEdit={(task) => {
+            setSelectedTaskId(null)
+            setEditingTask(task)
+            setIsCreatingTask(true)
+          }}
           onSaveTaskDate={handleSaveTaskDate}
           onSave={(payload) => {
             if (editingTask) {
