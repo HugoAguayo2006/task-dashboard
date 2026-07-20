@@ -123,6 +123,14 @@ function App() {
 
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    const themeColor = theme === 'dark' ? '#0c1017' : '#f4f7fb'
+    const root = document.documentElement
+    const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+
+    root.style.backgroundColor = themeColor
+    root.style.colorScheme = theme
+    document.body.style.backgroundColor = themeColor
+    themeColorMeta?.setAttribute('content', themeColor)
   }, [theme])
 
   useLayoutEffect(() => {
