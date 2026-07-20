@@ -1682,7 +1682,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 40;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -2588,6 +2588,20 @@
   .details-panel dl div {
     display: grid;
     gap: 4px;
+  }
+
+  .details-date-control dd {
+    justify-self: center;
+    justify-items: stretch;
+    margin-inline: auto;
+  }
+
+  .details-date-shortcuts {
+    justify-content: center;
+  }
+
+  .date-save-message {
+    text-align: center;
   }
 
   .modal-actions {
