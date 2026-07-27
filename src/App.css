@@ -2082,7 +2082,7 @@
   margin: 0;
 }
 
-.details-panel dl div {
+.details-panel dl > div {
   display: flex;
   justify-content: space-between;
   gap: 12px;
