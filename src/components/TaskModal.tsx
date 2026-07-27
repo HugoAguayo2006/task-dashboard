@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type UIEvent } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
 import { readableColor, visibleOnLightColor } from '../utils/colors'
@@ -48,13 +48,6 @@ const repeatPresets: Record<RepeatPreset, Pick<TaskDraft['repeat'], 'enabled' | 
   custom: { enabled: true, interval: 1, unit: 'week', forever: false },
 }
 
-const quickTimes = Array.from({ length: 32 }, (_, index) => {
-  const totalMinutes = 7 * 60 + index * 30
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-})
-
 function repeatPresetFromDraft(repeat: TaskDraft['repeat']): RepeatPreset {
   if (!repeat.enabled) return 'none'
   if (repeat.interval === 3 && repeat.unit === 'day') return 'three-days'
@@ -64,17 +57,81 @@ function repeatPresetFromDraft(repeat: TaskDraft['repeat']): RepeatPreset {
   return 'custom'
 }
 
-function formatTimeOption(time: string) {
-  const [rawHour, rawMinute] = time.split(':').map(Number)
-  const period = rawHour >= 12 ? 'p.m.' : 'a.m.'
-  const hour = rawHour % 12 || 12
-  return `${hour}:${String(rawMinute).padStart(2, '0')} ${period}`
-}
-
 function normalizeOccurrences(value: string | number) {
   const numericValue = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(numericValue)) return 2
   return Math.max(2, Math.min(60, Math.trunc(numericValue)))
+}
+
+const wheelHours = Array.from({ length: 12 }, (_, index) => String(index + 1))
+const wheelMinutes = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'))
+const wheelPeriods = ['a.m.', 'p.m.']
+
+function TimeWheelColumn({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  const columnRef = useRef<HTMLDivElement>(null)
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const index = Math.max(0, options.indexOf(value))
+    columnRef.current?.scrollTo({ top: index * 36 })
+  }, [options, value])
+
+  const selectNearest = (event: UIEvent<HTMLDivElement>) => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    const column = event.currentTarget
+    scrollTimer.current = setTimeout(() => {
+      const index = Math.max(0, Math.min(options.length - 1, Math.round(column.scrollTop / 36)))
+      onChange(options[index])
+    }, 80)
+  }
+
+  return (
+    <div
+      ref={columnRef}
+      className="time-wheel-column"
+      aria-label={label}
+      role="listbox"
+      onScroll={selectNearest}
+    >
+      {options.map((option) => (
+        <button
+          className={option === value ? 'active' : ''}
+          key={option}
+          role="option"
+          aria-selected={option === value}
+          type="button"
+          onClick={() => onChange(option)}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function timeParts(time: string) {
+  const [hour24, minute] = time.split(':').map(Number)
+  return {
+    hour: String(hour24 % 12 || 12),
+    minute: String(minute).padStart(2, '0'),
+    period: hour24 >= 12 ? 'p.m.' : 'a.m.',
+  }
+}
+
+function timeFromParts(hour: string, minute: string, period: string) {
+  const hour12 = Number(hour) % 12
+  const hour24 = period === 'p.m.' ? hour12 + 12 : hour12
+  return `${String(hour24).padStart(2, '0')}:${minute}`
 }
 
 export function TaskModal({
@@ -100,6 +157,10 @@ export function TaskModal({
   const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
 
   useEffect(() => {
+    const defaultListId =
+      lists.find((list) => list.name.trim().toLocaleLowerCase('es') === 'proyectos personales')?.id ??
+      lists[0]?.id ??
+      ''
     setDraft(
       task
         ? {
@@ -112,7 +173,7 @@ export function TaskModal({
             tags: task.tags,
             repeat: emptyDraft.repeat,
           }
-        : { ...emptyDraft, dueDate: defaultDueDate ?? todayISO(), listId: lists[0]?.id ?? '' },
+        : { ...emptyDraft, dueDate: defaultDueDate ?? todayISO(), listId: defaultListId },
     )
     setTagText(task?.tags.join(', ') ?? '')
     setShowTimePicker(false)
@@ -156,7 +217,7 @@ export function TaskModal({
     setDateSaveStatus('idle')
   }
   const saveTaskDate = async () => {
-    if (!task || task.source !== 'manual' || !detailDueDate || detailDueDate === task.dueDate) return
+    if (!task || task.source !== 'manual' || detailDueDate === task.dueDate) return
     setDateSaveStatus('saving')
     try {
       const result = await onSaveTaskDate(task, detailDueDate)
@@ -166,6 +227,18 @@ export function TaskModal({
     }
   }
   const repeatPreset = repeatPresetFromDraft(draft.repeat)
+  const selectedTime = timeParts(draft.dueTime || '09:00')
+  const openTimePicker = () => {
+    if (!draft.dueTime) setDraft((current) => ({ ...current, dueTime: '09:00' }))
+    setShowTimePicker(true)
+  }
+  const changeTimePart = (part: 'hour' | 'minute' | 'period', value: string) => {
+    const next = { ...selectedTime, [part]: value }
+    setDraft((current) => ({
+      ...current,
+      dueTime: timeFromParts(next.hour, next.minute, next.period),
+    }))
+  }
   const changeRepeatPreset = (preset: RepeatPreset) => {
     setDraft((current) => ({
       ...current,
@@ -263,16 +336,26 @@ export function TaskModal({
                       >
                         Mañana
                       </button>
+                      <button
+                        className={!detailDueDate ? 'active' : ''}
+                        disabled={dateSaveStatus === 'saving'}
+                        type="button"
+                        onClick={() => changeTaskDate('')}
+                      >
+                        Sin fecha
+                      </button>
                     </div>
                     <button
                       className="save-date-button"
-                      disabled={
-                        dateSaveStatus === 'saving' || !detailDueDate || detailDueDate === task.dueDate
-                      }
+                      disabled={dateSaveStatus === 'saving' || detailDueDate === task.dueDate}
                       type="button"
                       onClick={saveTaskDate}
                     >
-                      {dateSaveStatus === 'saving' ? 'Guardando...' : 'Guardar fecha'}
+                      {dateSaveStatus === 'saving'
+                        ? 'Guardando...'
+                        : detailDueDate
+                          ? 'Guardar fecha'
+                          : 'Quitar fecha'}
                     </button>
                     {dateSaveStatus !== 'idle' ? (
                       <p className={`date-save-message ${dateSaveStatus}`}>
@@ -401,6 +484,13 @@ export function TaskModal({
                       Mañana
                     </button>
                     <button
+                      className={!draft.dueDate ? 'active' : ''}
+                      type="button"
+                      onClick={() => quickDate('')}
+                    >
+                      Sin fecha
+                    </button>
+                    <button
                       className={showDatePicker ? 'active' : ''}
                       type="button"
                       onClick={() => setShowDatePicker((open) => !open)}
@@ -421,40 +511,22 @@ export function TaskModal({
               <label>
                 Hora
                 <div className="time-field">
-                  <input
-                    type="time"
-                    value={draft.dueTime}
-                    onChange={(event) => setDraft({ ...draft, dueTime: event.target.value })}
-                    onFocus={() => setShowTimePicker(true)}
-                    onClick={() => setShowTimePicker(true)}
-                  />
+                  <button className="time-picker-trigger" type="button" onClick={openTimePicker}>
+                    <span>{draft.dueTime ? `${selectedTime.hour}:${selectedTime.minute} ${selectedTime.period}` : 'Sin hora'}</span>
+                    <span aria-hidden="true">◷</span>
+                  </button>
                   {showTimePicker ? (
-                    <div className="time-shortcuts" aria-label="Horas rápidas">
-                      <button
-                        className={!draft.dueTime ? 'active' : ''}
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setDraft({ ...draft, dueTime: '' })
-                          setShowTimePicker(false)
-                        }}
-                      >
-                        Sin hora
-                      </button>
-                      {quickTimes.map((time) => (
-                        <button
-                          className={draft.dueTime === time ? 'active' : ''}
-                          key={time}
-                          type="button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => {
-                            setDraft({ ...draft, dueTime: time })
-                            setShowTimePicker(false)
-                          }}
-                        >
-                          {formatTimeOption(time)}
-                        </button>
-                      ))}
+                    <div className="time-wheel-popover">
+                      <div className="time-wheel-selection" aria-hidden="true" />
+                      <div className="time-wheel">
+                        <TimeWheelColumn label="Hora" options={wheelHours} value={selectedTime.hour} onChange={(value) => changeTimePart('hour', value)} />
+                        <TimeWheelColumn label="Minutos" options={wheelMinutes} value={selectedTime.minute} onChange={(value) => changeTimePart('minute', value)} />
+                        <TimeWheelColumn label="Periodo" options={wheelPeriods} value={selectedTime.period} onChange={(value) => changeTimePart('period', value)} />
+                      </div>
+                      <div className="time-wheel-actions">
+                        <button type="button" onClick={() => { setDraft({ ...draft, dueTime: '' }); setShowTimePicker(false) }}>Sin hora</button>
+                        <button className="primary" type="button" onClick={() => setShowTimePicker(false)}>Listo</button>
+                      </div>
                     </div>
                   ) : null}
                 </div>

@@ -41,8 +41,9 @@ export function CalendarView({
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [dropDate, setDropDate] = useState<string | null>(null)
   const [visibleDate, setVisibleDate] = useState(() => new Date())
+  const today = todayISO()
   const sortedTasks = sortCalendarTasks(
-    tasks.filter((task) => task.completed || !task.dueDate || task.dueDate >= todayISO()),
+    tasks.filter((task) => task.completed || !task.dueDate || task.dueDate >= today),
   )
 
   const dropTaskOnDate = (date: string) => {
@@ -111,7 +112,9 @@ export function CalendarView({
           const iso = toISODate(day)
           const dayTasks = sortCalendarTasks(sortedTasks.filter((task) => task.dueDate === iso))
           const muted = mode === 'month' && day.getMonth() !== currentMonth
-          const isToday = iso === todayISO()
+          const isToday = iso === today
+          const hasIncompletePastTask =
+            iso < today && tasks.some((task) => task.dueDate === iso && !task.completed)
           const column = index % 7
           const row = Math.floor(index / 7)
           const popoverPosition = column <= 1 ? 'start' : column >= 5 ? 'end' : 'center'
@@ -119,6 +122,8 @@ export function CalendarView({
           return (
             <div
               className={`calendar-day ${muted ? 'muted' : ''} ${isToday ? 'today' : ''} ${
+                hasIncompletePastTask ? 'has-incomplete-past-task' : ''
+              } ${
                 dropDate === iso ? 'is-drop-target' : ''
               }`}
               key={iso}

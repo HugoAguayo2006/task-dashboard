@@ -35,7 +35,7 @@ const defaultTodayFilters: TodayFilters = {
   query: '',
   listId: 'all',
   source: 'all',
-  status: 'pending',
+  status: 'all',
   priority: 'all',
   dateScope: 'today',
 }
@@ -79,7 +79,14 @@ export function TodayPage({
   }, [filters, isTomorrow, targetDate, tasks, today])
 
   const visibleTasks = getNextTaskPerRecurringSeries(filteredTasks)
-  const todayTasks = visibleTasks.filter((task) => task.dueDate === targetDate)
+  const todayTasks = visibleTasks
+    .filter((task) => task.dueDate === targetDate)
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1
+      return (a.dueTime || '23:59').localeCompare(b.dueTime || '23:59')
+    })
+  const pendingVisibleTodayTasks = todayTasks.filter((task) => !task.completed)
+  const completedVisibleTodayTasks = todayTasks.filter((task) => task.completed)
   const overdueTasks = isTomorrow
     ? []
     : visibleTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today)
@@ -175,12 +182,12 @@ export function TodayPage({
       </section>
 
       <div className="today-content">
-        {todayTasks.length ? (
+        {pendingVisibleTodayTasks.length ? (
           <TodayGroup
             title={isTomorrow ? 'Para mañana' : 'Para hoy'}
-            subtitle={makeGroupSubtitle(todayTasks)}
+            subtitle={makeGroupSubtitle(pendingVisibleTodayTasks)}
             tone="primary"
-            tasks={todayTasks}
+            tasks={pendingVisibleTodayTasks}
             onComplete={onComplete}
             onDelete={onDelete}
             onEdit={onEdit}
@@ -199,7 +206,19 @@ export function TodayPage({
             onOpen={onOpen}
           />
         ) : null}
-        {!todayTasks.length && !overdueTasks.length ? (
+        {completedVisibleTodayTasks.length ? (
+          <TodayGroup
+            title={isTomorrow ? 'Completadas mañana' : 'Completadas hoy'}
+            subtitle={makeGroupSubtitle(completedVisibleTodayTasks)}
+            tone="completed"
+            tasks={completedVisibleTodayTasks}
+            onComplete={onComplete}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onOpen={onOpen}
+          />
+        ) : null}
+        {!pendingVisibleTodayTasks.length && !overdueTasks.length && !completedVisibleTodayTasks.length ? (
           <div className="today-empty">
             <strong>No hay tareas con estos filtros.</strong>
             <span>Cambia los filtros o crea una tarea para {isTomorrow ? 'mañana' : 'hoy'}.</span>

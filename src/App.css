@@ -543,13 +543,6 @@
   flex: 1 1 320px;
 }
 
-.task-form input[type='time'] {
-  height: 54px;
-  padding-top: 0;
-  padding-bottom: 0;
-  line-height: 54px;
-}
-
 .filters-bar select {
   flex: 0 1 190px;
   max-width: 100%;
@@ -1022,6 +1015,25 @@
 
 .calendar-day.today {
   border-color: color-mix(in srgb, var(--accent-strong) 36%, transparent);
+}
+
+.calendar-day.has-incomplete-past-task {
+  border-color: rgba(248, 113, 113, 0.48);
+  background:
+    linear-gradient(rgba(127, 29, 29, 0.2), rgba(127, 29, 29, 0.2)),
+    var(--surface-muted);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.08);
+}
+
+.calendar-day.muted.has-incomplete-past-task {
+  opacity: 0.72;
+}
+
+.theme-light .calendar-day.has-incomplete-past-task {
+  border-color: rgba(220, 38, 38, 0.38);
+  background:
+    linear-gradient(rgba(254, 226, 226, 0.72), rgba(254, 226, 226, 0.72)),
+    var(--surface-muted);
 }
 
 .calendar-day.today .day-number span {
@@ -1765,6 +1777,104 @@
   align-content: start;
 }
 
+.time-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-muted-strong);
+  font-size: 15px;
+}
+
+.time-wheel-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+  width: min(360px, 100%);
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow);
+}
+
+.time-wheel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  height: 180px;
+  mask-image: linear-gradient(to bottom, transparent, #000 23%, #000 77%, transparent);
+}
+
+.time-wheel-selection {
+  position: absolute;
+  top: 82px;
+  left: 10px;
+  right: 10px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--control-hover);
+}
+
+.time-wheel-column {
+  overflow-y: auto;
+  padding-block: 72px;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+
+.time-wheel-column::-webkit-scrollbar {
+  display: none;
+}
+
+.time-wheel-column button {
+  display: block;
+  width: 100%;
+  height: 36px;
+  border: 0;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 18px;
+  font-weight: 500;
+  scroll-snap-align: center;
+}
+
+.time-wheel-column button.active {
+  color: var(--text-strong);
+}
+
+.time-wheel-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.time-wheel-actions button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--text-soft);
+  background: var(--control-bg);
+}
+
+.time-wheel-actions button.primary {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
 .date-shortcuts {
   display: flex;
   flex-wrap: wrap;
@@ -1792,57 +1902,6 @@
   color: var(--accent-text);
   border-color: transparent;
   background: var(--accent);
-}
-
-.time-shortcuts {
-  position: absolute;
-  z-index: 8;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  display: grid;
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-solid);
-  box-shadow: var(--shadow);
-  scrollbar-color: var(--text-muted) var(--surface-solid);
-  scrollbar-width: thin;
-}
-
-.time-shortcuts button {
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 0;
-  color: var(--text-soft);
-  background: transparent;
-  font-size: 17px;
-  font-weight: 600;
-  text-align: left;
-}
-
-.time-shortcuts button.active,
-.time-shortcuts button:hover {
-  color: var(--text-strong);
-  background: var(--control-hover);
-}
-
-.time-shortcuts::-webkit-scrollbar {
-  width: 10px;
-}
-
-.time-shortcuts::-webkit-scrollbar-track {
-  background: var(--surface-solid);
-}
-
-.time-shortcuts::-webkit-scrollbar-thumb {
-  border: 2px solid var(--surface-solid);
-  border-radius: 999px;
-  background: var(--text-muted);
 }
 
 .mini-calendar {

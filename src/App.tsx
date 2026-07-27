@@ -32,6 +32,7 @@ const initialFilters: TaskFilters = {
 
 const initialTodayFilters: TodayFilters = {
   ...initialFilters,
+  status: 'all',
   dateScope: 'today',
 }
 

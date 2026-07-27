@@ -70,7 +70,15 @@ export function isOverdue(task: Task) {
 }
 
 export function formatTaskDateLabel(task: Task) {
-  if (isOverdue(task)) return 'Vencida'
+  if (isOverdue(task)) {
+    const includeYear = task.dueDate.slice(0, 4) !== String(new Date().getFullYear())
+    const originalDate = new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      ...(includeYear ? { year: 'numeric' } : {}),
+    }).format(new Date(`${task.dueDate}T12:00:00`))
+    return `Vencida · ${originalDate}`
+  }
   return formatDateLabel(task.dueDate)
 }
 
