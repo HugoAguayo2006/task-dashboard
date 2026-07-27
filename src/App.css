@@ -407,6 +407,7 @@
 
 .canvas-status,
 .sync-status,
+.notification-status,
 .filters-bar,
 .summary-grid > div,
 .list-summary,
@@ -424,7 +425,8 @@
 }
 
 .canvas-status,
-.sync-status {
+.sync-status,
+.notification-status {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -434,12 +436,24 @@
 }
 
 .canvas-status > div,
-.sync-status > div {
+.sync-status > div,
+.notification-status > div {
   min-width: 0;
+}
+
+.notification-status strong,
+.notification-status small {
+  display: block;
+}
+
+.notification-status small {
+  margin-top: 3px;
+  color: var(--text-muted);
 }
 
 .canvas-status button,
 .sync-status button,
+.notification-status button,
 .canvas-page > button {
   border-color: rgba(148, 163, 184, 0.24);
   border-color: var(--border-strong);

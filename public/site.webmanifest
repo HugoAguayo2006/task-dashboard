@@ -1,6 +1,9 @@
 {
   "name": "Chalendar",
   "short_name": "Chalendar",
+  "id": "/",
+  "start_url": "/",
+  "description": "Tareas, calendario y recordatorios personales",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

@@ -98,6 +98,26 @@ https://task-dashboard-flame-beta.vercel.app/api/calendar/tasks.ics?token=tu_tok
 
 En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agregar calendario suscrito. Pega la URL y guarda. El calendario es de solo lectura: los cambios hechos en Chalendar aparecen en iPhone cuando la app Calendario actualiza la suscripción.
 
+## Notificaciones en iPhone
+
+Chalendar funciona como PWA y envía estos recordatorios para tareas manuales pendientes:
+
+- Prioridad alta: a las 8:00 a. m. de su fecha.
+- Tareas con hora: 1 día antes y 1 hora antes.
+
+Ejecuta de nuevo [`docs/supabase-schema.sql`](docs/supabase-schema.sql) y genera un par de llaves:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Configura `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y `CRON_SECRET` en Vercel.
+El workflow `.github/workflows/send-reminders.yml` ejecuta el evaluador cada cinco minutos en
+GitHub Actions. Guarda el mismo `CRON_SECRET` como secreto del repositorio en GitHub.
+
+En iPhone abre el sitio en Safari, elige **Compartir → Añadir a pantalla de inicio**, abre
+Chalendar desde el nuevo icono y toca **Activar notificaciones**.
+
 ## Funciones
 
 - Dashboard con tareas próximas, vencidas, manuales, Canvas y resumen por lista.

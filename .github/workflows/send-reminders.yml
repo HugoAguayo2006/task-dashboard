@@ -1,0 +1,20 @@
+name: Enviar recordatorios
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Revisar tareas próximas
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error \
+            --retry 2 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://task-dashboard-flame-beta.vercel.app/api/notifications/send-reminders

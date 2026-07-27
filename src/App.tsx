@@ -3,6 +3,7 @@ import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
 import { ExternalCalendarStatus } from './components/ExternalCalendarStatus'
 import { FiltersBar } from './components/FiltersBar'
+import { NotificationStatus } from './components/NotificationStatus'
 import { Sidebar } from './components/Sidebar'
 import { SyncStatusBar } from './components/SyncStatusBar'
 import { TaskModal } from './components/TaskModal'
@@ -396,6 +397,7 @@ function App() {
           onRefresh={externalCalendarState.refresh}
         />
         <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
+        <NotificationStatus />
 
         {view !== 'today' && view !== 'tomorrow' ? (
           <FiltersBar
