@@ -18,7 +18,7 @@ type TaskModalProps = {
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
   onEdit: (task: Task) => void
-  onSaveTaskDate: (task: Task, dueDate: string) => Promise<DateSaveResult>
+  onSaveTaskDate: (task: Task, dueDate: string, dueTime: string) => Promise<DateSaveResult>
   onSave: (draft: TaskDraft) => void
 }
 
@@ -154,6 +154,8 @@ export function TaskModal({
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [occurrencesText, setOccurrencesText] = useState(String(emptyDraft.repeat.occurrences))
   const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
+  const [detailDueTime, setDetailDueTime] = useState(task?.dueTime ?? '')
+  const [showDetailTimePicker, setShowDetailTimePicker] = useState(false)
   const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
 
   useEffect(() => {
@@ -186,7 +188,9 @@ export function TaskModal({
 
   useEffect(() => {
     setDetailDueDate(task?.dueDate ?? '')
-  }, [task?.id, task?.dueDate])
+    setDetailDueTime(task?.dueTime ?? '')
+    setShowDetailTimePicker(false)
+  }, [task?.id, task?.dueDate, task?.dueTime])
 
   const closeModal = useCallback(() => {
     if (dateSaveStatus === 'saving') return
@@ -220,7 +224,7 @@ export function TaskModal({
     if (!task || task.source !== 'manual' || detailDueDate === task.dueDate) return
     setDateSaveStatus('saving')
     try {
-      const result = await onSaveTaskDate(task, detailDueDate)
+      const result = await onSaveTaskDate(task, detailDueDate, task.dueTime ?? '')
       setDateSaveStatus(result)
     } catch {
       setDateSaveStatus('error')
@@ -228,6 +232,7 @@ export function TaskModal({
   }
   const repeatPreset = repeatPresetFromDraft(draft.repeat)
   const selectedTime = timeParts(draft.dueTime || '09:00')
+  const selectedDetailTime = timeParts(detailDueTime || '09:00')
   const openTimePicker = () => {
     if (!draft.dueTime) setDraft((current) => ({ ...current, dueTime: '09:00' }))
     setShowTimePicker(true)
@@ -238,6 +243,21 @@ export function TaskModal({
       ...current,
       dueTime: timeFromParts(next.hour, next.minute, next.period),
     }))
+  }
+  const changeDetailTimePart = (part: 'hour' | 'minute' | 'period', value: string) => {
+    const next = { ...selectedDetailTime, [part]: value }
+    setDetailDueTime(timeFromParts(next.hour, next.minute, next.period))
+  }
+  const saveTaskTime = async () => {
+    if (!task || task.source !== 'manual' || detailDueTime === (task.dueTime ?? '')) return
+    setDateSaveStatus('saving')
+    try {
+      const result = await onSaveTaskDate(task, task.dueDate, detailDueTime)
+      setShowDetailTimePicker(false)
+      setDateSaveStatus(result)
+    } catch {
+      setDateSaveStatus('error')
+    }
   }
   const changeRepeatPreset = (preset: RepeatPreset) => {
     setDraft((current) => ({
@@ -368,6 +388,57 @@ export function TaskModal({
                               : 'No se pudo guardar. Intenta de nuevo.'}
                       </p>
                     ) : null}
+                  </dd>
+                </div>
+              ) : null}
+              {task.source === 'manual' ? (
+                <div className="details-date-control">
+                  <dt>Cambiar hora</dt>
+                  <dd>
+                    <div className="time-field detail-time-field">
+                      <button
+                        className="time-picker-trigger"
+                        disabled={dateSaveStatus === 'saving'}
+                        type="button"
+                        onClick={() => {
+                          if (!detailDueTime) setDetailDueTime('09:00')
+                          setShowDetailTimePicker((open) => !open)
+                        }}
+                      >
+                        <span>
+                          {detailDueTime
+                            ? `${selectedDetailTime.hour}:${selectedDetailTime.minute} ${selectedDetailTime.period}`
+                            : 'Sin hora'}
+                        </span>
+                        <span aria-hidden="true">◷</span>
+                      </button>
+                      {showDetailTimePicker ? (
+                        <div className="time-wheel-popover">
+                          <div className="time-wheel-selection" aria-hidden="true" />
+                          <div className="time-wheel">
+                            <TimeWheelColumn label="Hora" options={wheelHours} value={selectedDetailTime.hour} onChange={(value) => changeDetailTimePart('hour', value)} />
+                            <TimeWheelColumn label="Minutos" options={wheelMinutes} value={selectedDetailTime.minute} onChange={(value) => changeDetailTimePart('minute', value)} />
+                            <TimeWheelColumn label="Periodo" options={wheelPeriods} value={selectedDetailTime.period} onChange={(value) => changeDetailTimePart('period', value)} />
+                          </div>
+                          <div className="time-wheel-actions">
+                            <button type="button" onClick={() => { setDetailDueTime(''); setShowDetailTimePicker(false) }}>Sin hora</button>
+                            <button className="primary" type="button" onClick={() => setShowDetailTimePicker(false)}>Listo</button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      className="save-date-button"
+                      disabled={dateSaveStatus === 'saving' || detailDueTime === (task.dueTime ?? '')}
+                      type="button"
+                      onClick={saveTaskTime}
+                    >
+                      {dateSaveStatus === 'saving'
+                        ? 'Guardando...'
+                        : detailDueTime
+                          ? 'Guardar hora'
+                          : 'Quitar hora'}
+                    </button>
                   </dd>
                 </div>
               ) : null}

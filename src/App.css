@@ -2110,6 +2110,10 @@
   width: 100%;
 }
 
+.detail-time-field {
+  width: 100%;
+}
+
 .details-date-shortcuts {
   display: flex;
   flex-wrap: wrap;

@@ -261,8 +261,8 @@ function App() {
     })
   }
 
-  const handleSaveTaskDate = async (task: Task, dueDate: string) => {
-    if (task.source !== 'manual' || task.dueDate === dueDate) {
+  const handleSaveTaskDate = async (task: Task, dueDate: string, dueTime: string) => {
+    if (task.source !== 'manual' || (task.dueDate === dueDate && (task.dueTime ?? '') === dueTime)) {
       return syncDisabled.current ? 'local' : 'synced'
     }
 
@@ -272,6 +272,7 @@ function App() {
         ? {
             ...currentTask,
             dueDate,
+            dueTime,
             updatedAt: timestamp,
           }
         : currentTask,
