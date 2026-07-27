@@ -13,6 +13,10 @@ type Task = {
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
 type Reminder = { id: string; task: Task; scheduledAt: Date; label: string }
 
+// Los cron externos pueden arrancar tarde. La tabla de recordatorios enviados evita
+// duplicados, así que una ventana amplia permite recuperar avisos retrasados.
+const REMINDER_LOOKBACK_MS = 2 * 60 * 60_000
+
 function header(request: VercelRequest, name: string) {
   const value = request.headers?.[name] ?? request.headers?.[name.toLowerCase()]
   return Array.isArray(value) ? value[0] : value
@@ -91,7 +95,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const subscriptions = await subscriptionsResponse.json() as Subscription[]
   const tasks = stateRows[0]?.data?.tasks ?? []
   const now = Date.now()
-  const windowStart = now - 10 * 60_000
+  const windowStart = now - REMINDER_LOOKBACK_MS
   let sent = 0
 
   for (const subscription of subscriptions) {
@@ -130,4 +134,3 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
   response.status(200).json({ ok: true, sent, subscriptions: subscriptions.length })
 }
-
