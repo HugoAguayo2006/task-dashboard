@@ -9,6 +9,7 @@ type DateSaveResult = 'synced' | 'local'
 type DateSaveStatus = 'idle' | 'saving' | DateSaveResult | 'error'
 
 type TaskModalProps = {
+  defaultDueDate?: string
   lists: TaskList[]
   mode: 'form' | 'details'
   task: Task | null
@@ -77,6 +78,7 @@ function normalizeOccurrences(value: string | number) {
 }
 
 export function TaskModal({
+  defaultDueDate,
   lists,
   mode,
   task,
@@ -110,12 +112,12 @@ export function TaskModal({
             tags: task.tags,
             repeat: emptyDraft.repeat,
           }
-        : { ...emptyDraft, listId: lists[0]?.id ?? '' },
+        : { ...emptyDraft, dueDate: defaultDueDate ?? todayISO(), listId: lists[0]?.id ?? '' },
     )
     setTagText(task?.tags.join(', ') ?? '')
     setShowTimePicker(false)
     setOccurrencesText(String(task ? emptyDraft.repeat.occurrences : emptyDraft.repeat.occurrences))
-  }, [lists, task])
+  }, [defaultDueDate, lists, task])
 
   useEffect(() => {
     setDateSaveStatus('idle')

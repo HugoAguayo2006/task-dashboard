@@ -18,7 +18,7 @@ import { initialLists } from './data/initialWorkspace'
 import { fetchSyncState, saveSyncState } from './services/syncApi'
 import type { SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters } from './types/task'
-import { filterTasks, sortTasksByDueDate } from './utils/dates'
+import { addDaysISO, filterTasks, sortTasksByDueDate } from './utils/dates'
 import { mergeInitialTasks } from './utils/mergeTasks'
 
 const initialFilters: TaskFilters = {
@@ -54,6 +54,8 @@ function App() {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
   const [filters, setFilters] = useState<TaskFilters>(initialFilters)
   const [todayFilters, setTodayFilters] = useState<TodayFilters>(initialTodayFilters)
+  const [tomorrowFilters, setTomorrowFilters] = useState<TodayFilters>(initialTodayFilters)
+  const [newTaskDueDate, setNewTaskDueDate] = useState<string | undefined>()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isCreatingTask, setIsCreatingTask] = useState(false)
@@ -317,6 +319,7 @@ function App() {
         tasks={allTasks}
         onCreateList={listsState.createList}
         onCreateTask={() => {
+          setNewTaskDueDate(undefined)
           setEditingTask(null)
           setIsCreatingTask(true)
         }}
@@ -355,6 +358,8 @@ function App() {
                     ? 'Canvas'
                     : view === 'today'
                       ? 'Hoy'
+                      : view === 'tomorrow'
+                        ? 'Mañana'
                       : selectedList?.name ?? 'Mis tareas'}
               </h1>
             </div>
@@ -374,6 +379,7 @@ function App() {
               className="primary-button"
               type="button"
               onClick={() => {
+                setNewTaskDueDate(undefined)
                 setEditingTask(null)
                 setIsCreatingTask(true)
               }}
@@ -391,7 +397,7 @@ function App() {
         />
         <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
 
-        {view !== 'today' ? (
+        {view !== 'today' && view !== 'tomorrow' ? (
           <FiltersBar
             calendarMode={calendarMode}
             filters={filters}
@@ -426,6 +432,7 @@ function App() {
             tasks={allTasks}
             onComplete={handleComplete}
             onCreateTodayTask={() => {
+              setNewTaskDueDate(undefined)
               setEditingTask(null)
               setIsCreatingTask(true)
             }}
@@ -435,6 +442,28 @@ function App() {
               setIsCreatingTask(true)
             }}
             onFiltersChange={setTodayFilters}
+            onOpen={(task) => setSelectedTaskId(task.id)}
+          />
+        ) : null}
+
+        {view === 'tomorrow' ? (
+          <TodayPage
+            day="tomorrow"
+            filters={tomorrowFilters}
+            lists={listsState.lists}
+            tasks={allTasks}
+            onComplete={handleComplete}
+            onCreateTodayTask={() => {
+              setNewTaskDueDate(addDaysISO(1))
+              setEditingTask(null)
+              setIsCreatingTask(true)
+            }}
+            onDelete={handleDelete}
+            onEdit={(task) => {
+              setEditingTask(task)
+              setIsCreatingTask(true)
+            }}
+            onFiltersChange={setTomorrowFilters}
             onOpen={(task) => setSelectedTaskId(task.id)}
           />
         ) : null}
@@ -466,6 +495,7 @@ function App() {
 
       {(isCreatingTask || selectedTask) && (
         <TaskModal
+          defaultDueDate={newTaskDueDate}
           lists={listsState.lists}
           mode={isCreatingTask ? 'form' : 'details'}
           task={isCreatingTask ? editingTask : selectedTask}

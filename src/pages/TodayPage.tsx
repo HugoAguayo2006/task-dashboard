@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { TaskCard } from '../components/TaskCard'
 import type { TaskList } from '../types/list'
 import type { Task, TaskFilters, TaskPriority } from '../types/task'
-import { filterTasks, sortTasksByDueDate, todayISO } from '../utils/dates'
+import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from '../utils/dates'
 import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
 
 export type TodayDateScope = 'focus' | 'today' | 'overdue' | 'upcoming' | 'all'
@@ -12,6 +12,7 @@ export type TodayFilters = TaskFilters & {
 }
 
 type TodayPageProps = {
+  day?: 'today' | 'tomorrow'
   filters: TodayFilters
   lists: TaskList[]
   tasks: Task[]
@@ -52,6 +53,7 @@ function makeGroupSubtitle(tasks: Task[]) {
 }
 
 export function TodayPage({
+  day = 'today',
   filters,
   lists,
   tasks,
@@ -64,19 +66,25 @@ export function TodayPage({
 }: TodayPageProps) {
   const patch = (updates: Partial<TodayFilters>) => onFiltersChange({ ...filters, ...updates })
   const today = todayISO()
+  const targetDate = day === 'tomorrow' ? addDaysISO(1) : today
+  const isTomorrow = day === 'tomorrow'
 
   const filteredTasks = useMemo(() => {
     const baseTasks = filterTasks(tasks, filters)
     return sortTasksByDueDate(
-      baseTasks.filter((task) => task.dueDate === today || (!task.completed && task.dueDate && task.dueDate < today)),
+      baseTasks.filter((task) =>
+        task.dueDate === targetDate || (!isTomorrow && !task.completed && task.dueDate && task.dueDate < today),
+      ),
     )
-  }, [filters, tasks, today])
+  }, [filters, isTomorrow, targetDate, tasks, today])
 
   const visibleTasks = getNextTaskPerRecurringSeries(filteredTasks)
-  const todayTasks = visibleTasks.filter((task) => task.dueDate === today)
-  const overdueTasks = visibleTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today)
-  const pendingTodayTasks = tasks.filter((task) => !task.completed && task.dueDate === today)
-  const completedTodayTasks = tasks.filter((task) => task.completed && task.dueDate === today)
+  const todayTasks = visibleTasks.filter((task) => task.dueDate === targetDate)
+  const overdueTasks = isTomorrow
+    ? []
+    : visibleTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today)
+  const pendingTodayTasks = tasks.filter((task) => !task.completed && task.dueDate === targetDate)
+  const completedTodayTasks = tasks.filter((task) => task.completed && task.dueDate === targetDate)
   const highPriorityTodayTasks = pendingTodayTasks.filter((task) => task.priority === 'high')
 
   return (
@@ -84,27 +92,27 @@ export function TodayPage({
       <div className="today-summary-grid">
         <div>
           <span>{countTasksOncePerRecurringSeries(pendingTodayTasks)}</span>
-          <p>Para hoy</p>
+          <p>{isTomorrow ? 'Para mañana' : 'Para hoy'}</p>
         </div>
         <div>
           <span>{countTasksOncePerRecurringSeries(highPriorityTodayTasks)}</span>
           <p>Alta prioridad</p>
         </div>
         <div>
-          <span>{tasks.filter((task) => task.source === 'canvas' && task.dueDate === today).length}</span>
-          <p>Canvas hoy</p>
+          <span>{tasks.filter((task) => task.source === 'canvas' && task.dueDate === targetDate).length}</span>
+          <p>Canvas {isTomorrow ? 'mañana' : 'hoy'}</p>
         </div>
         <div>
           <span>{countTasksOncePerRecurringSeries(completedTodayTasks)}</span>
-          <p>Completadas hoy</p>
+          <p>Completadas {isTomorrow ? 'mañana' : 'hoy'}</p>
         </div>
       </div>
 
-      <section className="today-filters" aria-label="Filtros de hoy">
+      <section className="today-filters" aria-label={`Filtros de ${isTomorrow ? 'mañana' : 'hoy'}`}>
         <div className="today-filter-main">
           <input
-            aria-label="Buscar en hoy"
-            placeholder="Buscar tareas de hoy"
+            aria-label={`Buscar en ${isTomorrow ? 'mañana' : 'hoy'}`}
+            placeholder={`Buscar tareas de ${isTomorrow ? 'mañana' : 'hoy'}`}
             type="search"
             value={filters.query}
             onChange={(event) => patch({ query: event.target.value })}
@@ -115,7 +123,7 @@ export function TodayPage({
             </button>
             <button className="primary-button" type="button" onClick={onCreateTodayTask}>
               <span aria-hidden="true">+</span>
-              Hoy
+              {isTomorrow ? 'Mañana' : 'Hoy'}
             </button>
           </div>
         </div>
@@ -169,7 +177,7 @@ export function TodayPage({
       <div className="today-content">
         {todayTasks.length ? (
           <TodayGroup
-            title="Para hoy"
+            title={isTomorrow ? 'Para mañana' : 'Para hoy'}
             subtitle={makeGroupSubtitle(todayTasks)}
             tone="primary"
             tasks={todayTasks}
@@ -194,7 +202,7 @@ export function TodayPage({
         {!todayTasks.length && !overdueTasks.length ? (
           <div className="today-empty">
             <strong>No hay tareas con estos filtros.</strong>
-            <span>Cambia los filtros o crea una tarea para hoy.</span>
+            <span>Cambia los filtros o crea una tarea para {isTomorrow ? 'mañana' : 'hoy'}.</span>
           </div>
         ) : null}
       </div>
