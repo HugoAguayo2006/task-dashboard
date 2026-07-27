@@ -9,6 +9,10 @@ export type NotificationStatus =
 const apiBaseUrl = import.meta.env.VITE_SYNC_API_BASE_URL?.trim().replace(/\/$/, '') ?? ''
 const subscriptionUrl = `${apiBaseUrl}/api/notifications/subscription`
 
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
 function decodeBase64Url(value: string) {
   const padding = '='.repeat((4 - (value.length % 4)) % 4)
   const binary = atob((value + padding).replace(/-/g, '+').replace(/_/g, '/'))
@@ -21,10 +25,11 @@ export function isStandaloneWebApp() {
 }
 
 export async function getNotificationStatus(): Promise<NotificationStatus> {
+  if (!isIOSDevice()) return 'unsupported'
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return 'unsupported'
   }
-  if (!isStandaloneWebApp() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'needs-install'
+  if (!isStandaloneWebApp()) return 'needs-install'
   if (Notification.permission === 'denied') return 'denied'
 
   const registration = await navigator.serviceWorker.register('/service-worker.js')
@@ -33,6 +38,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
 }
 
 export async function enableNotifications() {
+  if (!isIOSDevice()) throw new Error('Los recordatorios push están disponibles únicamente en iPhone y iPad.')
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     throw new Error('Este navegador no admite notificaciones web.')
   }
@@ -63,4 +69,3 @@ export async function enableNotifications() {
   const payload = (await response.json().catch(() => ({}))) as { error?: string }
   if (!response.ok) throw new Error(payload.error ?? 'No se pudo registrar este iPhone.')
 }
-

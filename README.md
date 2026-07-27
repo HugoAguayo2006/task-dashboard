@@ -100,7 +100,7 @@ En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agreg
 
 ## Notificaciones en iPhone
 
-Chalendar funciona como PWA y envía estos recordatorios para tareas manuales pendientes:
+Chalendar funciona como PWA en iPhone/iPad y envía estos recordatorios para tareas manuales pendientes:
 
 - Prioridad alta: a las 8:00 a. m. de su fecha.
 - Tareas con hora: 1 día antes y 1 hora antes.
