@@ -103,7 +103,7 @@ En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agreg
 Chalendar funciona como PWA en iPhone/iPad y envía estos recordatorios para tareas manuales pendientes:
 
 - Prioridad alta: a las 8:00 a. m. de su fecha.
-- Tareas con hora: 1 día antes y 1 hora antes.
+- Tareas con hora: 1 día antes, 1 hora antes y a la hora indicada.
 
 Ejecuta de nuevo [`docs/supabase-schema.sql`](docs/supabase-schema.sql) y genera un par de llaves:
 

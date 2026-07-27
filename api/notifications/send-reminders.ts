@@ -51,6 +51,7 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
     for (const [kind, milliseconds, label] of [
       ['one-day', 86_400_000, 'Vence en 1 día'],
       ['one-hour', 3_600_000, 'Vence en 1 hora'],
+      ['due-now', 0, 'Tarea para ahora'],
     ] as const) {
       const scheduledAt = new Date(dueAt.getTime() - milliseconds)
       reminders.push({ id: `${task.id}:${kind}:${scheduledAt.toISOString()}`, task, scheduledAt, label })
@@ -124,6 +125,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
         sent += 1
       } catch (error) {
         const statusCode = (error as { statusCode?: number }).statusCode
+        const releaseClaimUrl = new URL('/rest/v1/chalendar_sent_reminders', supabaseUrl)
+        releaseClaimUrl.searchParams.set('reminder_id', `eq.${reminder.id}`)
+        releaseClaimUrl.searchParams.set('endpoint', `eq.${subscription.endpoint}`)
+        await fetch(releaseClaimUrl, { method: 'DELETE', headers })
         if (statusCode === 404 || statusCode === 410) {
           const deleteUrl = new URL('/rest/v1/chalendar_push_subscriptions', supabaseUrl)
           deleteUrl.searchParams.set('endpoint', `eq.${subscription.endpoint}`)

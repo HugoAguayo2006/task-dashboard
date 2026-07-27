@@ -16,7 +16,7 @@ export function NotificationStatus() {
   if (status === 'enabled') {
     return (
       <section className="notification-status status-synced">
-        <div><strong>Recordatorios activados</strong><small>Prioridad alta a las 8:00 · tareas con hora: 1 día y 1 hora antes</small></div>
+        <div><strong>Recordatorios activados</strong><small>Prioridad alta a las 8:00 · tareas con hora: 1 día antes, 1 hora antes y a la hora indicada</small></div>
       </section>
     )
   }
@@ -59,4 +59,3 @@ export function NotificationStatus() {
     </section>
   )
 }
-
