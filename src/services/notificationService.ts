@@ -19,6 +19,19 @@ function decodeBase64Url(value: string) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
+async function registerSubscription(subscription: PushSubscription) {
+  const response = await fetch(subscriptionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subscription: subscription.toJSON(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Mexico_City',
+    }),
+  })
+  const payload = (await response.json().catch(() => ({}))) as { error?: string }
+  if (!response.ok) throw new Error(payload.error ?? 'No se pudo registrar este iPhone.')
+}
+
 export function isStandaloneWebApp() {
   return window.matchMedia('(display-mode: standalone)').matches ||
     ('standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
@@ -34,6 +47,9 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
 
   const registration = await navigator.serviceWorker.register('/service-worker.js')
   const subscription = await registration.pushManager.getSubscription()
+  // Una suscripcion puede seguir existiendo en Safari aunque el registro del servidor
+  // se haya perdido. Renovarla al abrir la app mantiene ambos lados sincronizados.
+  if (subscription) await registerSubscription(subscription)
   return subscription ? 'enabled' : 'prompt'
 }
 
@@ -58,14 +74,5 @@ export async function enableNotifications() {
     userVisibleOnly: true,
     applicationServerKey: decodeBase64Url(keyPayload.publicKey),
   })
-  const response = await fetch(subscriptionUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      subscription: subscription.toJSON(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Mexico_City',
-    }),
-  })
-  const payload = (await response.json().catch(() => ({}))) as { error?: string }
-  if (!response.ok) throw new Error(payload.error ?? 'No se pudo registrar este iPhone.')
+  await registerSubscription(subscription)
 }

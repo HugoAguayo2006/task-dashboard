@@ -10,7 +10,10 @@ export function NotificationStatus() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getNotificationStatus().then(setStatus).catch(() => setStatus('unsupported'))
+    getNotificationStatus().then(setStatus).catch((caught) => {
+      setError(caught instanceof Error ? caught.message : 'No se pudo verificar este iPhone con el servidor.')
+      setStatus('prompt')
+    })
   }, [])
 
   if (status === 'enabled') {

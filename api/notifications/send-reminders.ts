@@ -13,9 +13,9 @@ type Task = {
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
 type Reminder = { id: string; task: Task; scheduledAt: Date; label: string }
 
-// Los cron externos pueden arrancar tarde. La tabla de recordatorios enviados evita
-// duplicados, así que una ventana amplia permite recuperar avisos retrasados.
-const REMINDER_LOOKBACK_MS = 2 * 60 * 60_000
+// GitHub Actions puede retrasar u omitir ejecuciones programadas. Como cada aviso se
+// reclama de forma unica en Supabase, podemos recuperar un dia completo sin duplicarlo.
+const REMINDER_LOOKBACK_MS = 26 * 60 * 60_000
 
 function header(request: VercelRequest, name: string) {
   const value = request.headers?.[name] ?? request.headers?.[name.toLowerCase()]
@@ -98,6 +98,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const now = Date.now()
   const windowStart = now - REMINDER_LOOKBACK_MS
   let sent = 0
+  let failed = 0
 
   for (const subscription of subscriptions) {
     const timezone = subscription.timezone || 'America/Mexico_City'
@@ -124,6 +125,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
         }))
         sent += 1
       } catch (error) {
+        failed += 1
         const statusCode = (error as { statusCode?: number }).statusCode
         const releaseClaimUrl = new URL('/rest/v1/chalendar_sent_reminders', supabaseUrl)
         releaseClaimUrl.searchParams.set('reminder_id', `eq.${reminder.id}`)
@@ -137,5 +139,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
       }
     }
   }
-  response.status(200).json({ ok: true, sent, subscriptions: subscriptions.length })
+  response.status(failed > 0 ? 502 : 200).json({
+    ok: failed === 0,
+    sent,
+    failed,
+    subscriptions: subscriptions.length,
+  })
 }
