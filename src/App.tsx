@@ -73,7 +73,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
   const [theme, setTheme] = useState<ThemeMode>(readSavedTheme)
-  const [inAppNotification, setInAppNotification] = useState<InAppNotification | null>(null)
+  const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([])
   const syncReady = useRef(false)
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
@@ -151,12 +151,16 @@ function App() {
 
     const handlePushMessage = (event: MessageEvent<Partial<InAppNotification> & { type?: string }>) => {
       if (event.data?.type !== 'CHALENDAR_PUSH') return
-      setInAppNotification({
+      const notification = {
         title: event.data.title || 'Chalendar',
         body: event.data.body || 'Tienes una tarea pendiente.',
         tag: event.data.tag || String(Date.now()),
         url: event.data.url || '/',
-      })
+      }
+      setInAppNotifications((current) => [
+        ...current.filter((item) => item.tag !== notification.tag),
+        notification,
+      ])
     }
 
     navigator.serviceWorker.addEventListener('message', handlePushMessage)
@@ -241,16 +245,21 @@ function App() {
         )
         .sort((first, second) => first.scheduledAt - second.scheduledAt)
 
-      const reminder = pendingReminders[0]
-      if (!reminder) return
+      if (!pendingReminders.length) return
 
-      shown.add(reminder.id)
+      pendingReminders.forEach((reminder) => shown.add(reminder.id))
       window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
-      setInAppNotification({
-        title: reminder.title,
-        body: reminder.task.title,
-        tag: reminder.id,
-        url: '/',
+      setInAppNotifications((current) => {
+        const nextTags = new Set(pendingReminders.map((reminder) => reminder.id))
+        return [
+          ...current.filter((item) => !nextTags.has(item.tag)),
+          ...pendingReminders.map((reminder) => ({
+            title: reminder.title,
+            body: reminder.task.title,
+            tag: reminder.id,
+            url: '/',
+          })),
+        ]
       })
     }
 
@@ -393,33 +402,37 @@ function App() {
 
   return (
     <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      {inAppNotification ? (
-        <aside className="in-app-notification" role="alert" aria-live="assertive">
-          <button
-            className="in-app-notification-content"
-            type="button"
-            onClick={() => {
-              setView('today')
-              setSidebarOpen(false)
-              setInAppNotification(null)
-              window.scrollTo({ left: 0, top: 0 })
-            }}
-          >
-            <img src="/web-app-manifest-192x192.png" alt="" />
-            <span>
-              <strong>{inAppNotification.title}</strong>
-              <small>{inAppNotification.body}</small>
-            </span>
-          </button>
-          <button
-            aria-label="Cerrar alerta"
-            className="in-app-notification-close"
-            type="button"
-            onClick={() => setInAppNotification(null)}
-          >
-            ×
-          </button>
-        </aside>
+      {inAppNotifications.length ? (
+        <section className="in-app-notification-stack" aria-label="Alertas pendientes" aria-live="assertive">
+          {inAppNotifications.map((notification) => (
+            <aside className="in-app-notification" role="alert" key={notification.tag}>
+              <button
+                className="in-app-notification-content"
+                type="button"
+                onClick={() => {
+                  setView('today')
+                  setSidebarOpen(false)
+                  setInAppNotifications((current) => current.filter((item) => item.tag !== notification.tag))
+                  window.scrollTo({ left: 0, top: 0 })
+                }}
+              >
+                <img src="/web-app-manifest-192x192.png" alt="" />
+                <span>
+                  <strong>{notification.title}</strong>
+                  <small>{notification.body}</small>
+                </span>
+              </button>
+              <button
+                aria-label={`Cerrar alerta: ${notification.body}`}
+                className="in-app-notification-close"
+                type="button"
+                onClick={() => setInAppNotifications((current) => current.filter((item) => item.tag !== notification.tag))}
+              >
+                ×
+              </button>
+            </aside>
+          ))}
+        </section>
       ) : null}
       <Sidebar
         activeView={view}

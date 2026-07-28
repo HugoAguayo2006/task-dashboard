@@ -98,12 +98,22 @@
   grid-template-columns: 84px minmax(0, 1fr);
 }
 
-.in-app-notification {
+.in-app-notification-stack {
   position: fixed;
   z-index: 120;
   top: max(16px, env(safe-area-inset-top));
   left: 50%;
   width: min(460px, calc(100vw - 24px));
+  max-height: calc(100vh - max(32px, env(safe-area-inset-top)));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  transform: translateX(-50%);
+}
+
+.in-app-notification {
+  width: 100%;
   padding: 8px;
   display: flex;
   align-items: center;
@@ -114,7 +124,6 @@
   border-radius: 18px;
   box-shadow: var(--modal-shadow);
   backdrop-filter: blur(18px);
-  transform: translateX(-50%);
   animation: notification-slide-in 180ms ease-out;
 }
 
@@ -174,7 +183,7 @@
 @keyframes notification-slide-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -12px);
+    transform: translateY(-12px);
   }
 }
 
