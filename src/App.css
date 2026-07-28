@@ -98,6 +98,86 @@
   grid-template-columns: 84px minmax(0, 1fr);
 }
 
+.in-app-notification {
+  position: fixed;
+  z-index: 120;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  width: min(460px, calc(100vw - 24px));
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: var(--modal-shadow);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+  animation: notification-slide-in 180ms ease-out;
+}
+
+.in-app-notification-content {
+  min-width: 0;
+  padding: 4px;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 11px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.in-app-notification-content img {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+}
+
+.in-app-notification-content span,
+.in-app-notification-content strong,
+.in-app-notification-content small {
+  min-width: 0;
+  display: block;
+}
+
+.in-app-notification-content small {
+  margin-top: 2px;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.in-app-notification-close {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 24px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+}
+
+.in-app-notification-close:hover {
+  color: var(--text-strong);
+  background: var(--control-hover);
+}
+
+@keyframes notification-slide-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+}
+
 .sidebar {
   border-color: var(--border);
   background: var(--sidebar-bg);

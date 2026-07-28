@@ -38,6 +38,13 @@ const initialTodayFilters: TodayFilters = {
 
 type ThemeMode = 'dark' | 'light'
 
+type InAppNotification = {
+  title: string
+  body: string
+  tag: string
+  url: string
+}
+
 const THEME_STORAGE_KEY = 'app-theme'
 
 function readSavedTheme(): ThemeMode {
@@ -65,6 +72,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
   const [theme, setTheme] = useState<ThemeMode>(readSavedTheme)
+  const [inAppNotification, setInAppNotification] = useState<InAppNotification | null>(null)
   const syncReady = useRef(false)
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
@@ -136,6 +144,29 @@ function App() {
     document.body.style.backgroundColor = themeColor
     themeColorMeta?.setAttribute('content', themeColor)
   }, [theme])
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+
+    const handlePushMessage = (event: MessageEvent<Partial<InAppNotification> & { type?: string }>) => {
+      if (event.data?.type !== 'CHALENDAR_PUSH') return
+      setInAppNotification({
+        title: event.data.title || 'Chalendar',
+        body: event.data.body || 'Tienes una tarea pendiente.',
+        tag: event.data.tag || String(Date.now()),
+        url: event.data.url || '/',
+      })
+    }
+
+    navigator.serviceWorker.addEventListener('message', handlePushMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage)
+  }, [])
+
+  useEffect(() => {
+    if (!inAppNotification) return
+    const timeout = window.setTimeout(() => setInAppNotification(null), 8_000)
+    return () => window.clearTimeout(timeout)
+  }, [inAppNotification])
 
   useLayoutEffect(() => {
     workspaceRef.current?.scrollTo({ left: 0, top: 0 })
@@ -314,6 +345,32 @@ function App() {
 
   return (
     <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {inAppNotification ? (
+        <aside className="in-app-notification" role="alert" aria-live="assertive">
+          <button
+            className="in-app-notification-content"
+            type="button"
+            onClick={() => {
+              const target = new URL(inAppNotification.url, window.location.origin)
+              if (target.origin === window.location.origin) window.location.assign(target.href)
+            }}
+          >
+            <img src="/web-app-manifest-192x192.png" alt="" />
+            <span>
+              <strong>{inAppNotification.title}</strong>
+              <small>{inAppNotification.body}</small>
+            </span>
+          </button>
+          <button
+            aria-label="Cerrar alerta"
+            className="in-app-notification-close"
+            type="button"
+            onClick={() => setInAppNotification(null)}
+          >
+            ×
+          </button>
+        </aside>
+      ) : null}
       <Sidebar
         activeView={view}
         collapsed={sidebarCollapsed}
