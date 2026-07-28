@@ -46,6 +46,7 @@ type InAppNotification = {
 }
 
 const THEME_STORAGE_KEY = 'app-theme'
+const SHOWN_IN_APP_REMINDERS_KEY = 'chalendar-shown-in-app-reminders'
 
 function readSavedTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'dark'
@@ -211,6 +212,38 @@ function App() {
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
     [canvasState.tasks, externalCalendarState.tasks, tasksState.tasks],
   )
+
+  useEffect(() => {
+    const checkDueTasks = () => {
+      const now = Date.now()
+      const recentWindow = now - 10 * 60_000
+      const shown = new Set<string>(
+        JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
+      )
+      const dueTask = allTasks.find((task) => {
+        if (task.completed || !task.dueDate || !task.dueTime) return false
+        const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()
+        const reminderId = `${task.id}:due-now:${task.dueDate}T${task.dueTime}`
+        return dueAt <= now && dueAt > recentWindow && !shown.has(reminderId)
+      })
+      if (!dueTask) return
+
+      const reminderId = `${dueTask.id}:due-now:${dueTask.dueDate}T${dueTask.dueTime}`
+      shown.add(reminderId)
+      window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
+      setInAppNotification({
+        title: 'Tarea para ahora',
+        body: dueTask.title,
+        tag: reminderId,
+        url: '/',
+      })
+    }
+
+    checkDueTasks()
+    const interval = window.setInterval(checkDueTasks, 10_000)
+    return () => window.clearInterval(interval)
+  }, [allTasks])
+
   const selectedTask = useMemo(
     () => allTasks.find((task) => task.id === selectedTaskId) ?? null,
     [allTasks, selectedTaskId],
