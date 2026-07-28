@@ -220,21 +220,42 @@ function App() {
       const shown = new Set<string>(
         JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
       )
-      const dueTask = allTasks.find((task) => {
-        if (task.completed || !task.dueDate || !task.dueTime) return false
-        const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()
-        const reminderId = `${task.id}:due-now:${task.dueDate}T${task.dueTime}`
-        return dueAt <= now && dueAt > recentWindow && !shown.has(reminderId)
+      const pendingReminders = allTasks.flatMap((task) => {
+        if (task.completed || !task.dueDate) return []
+        const reminders: Array<{ id: string; title: string; scheduledAt: number }> = []
+        if (task.priority === 'high') {
+          reminders.push({
+            id: `${task.id}:high-day:${task.dueDate}`,
+            title: 'Prioridad alta para hoy',
+            scheduledAt: new Date(`${task.dueDate}T08:00:00`).getTime(),
+          })
+        }
+        if (task.dueTime) {
+          const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()
+          reminders.push(
+            { id: `${task.id}:one-day:${task.dueDate}T${task.dueTime}`, title: 'Vence en 1 día', scheduledAt: dueAt - 86_400_000 },
+            { id: `${task.id}:one-hour:${task.dueDate}T${task.dueTime}`, title: 'Vence en 1 hora', scheduledAt: dueAt - 3_600_000 },
+            { id: `${task.id}:due-now:${task.dueDate}T${task.dueTime}`, title: 'Tarea para ahora', scheduledAt: dueAt },
+          )
+        }
+        return reminders.map((reminder) => ({ ...reminder, task }))
       })
-      if (!dueTask) return
+        .filter((reminder) =>
+          reminder.scheduledAt <= now &&
+          reminder.scheduledAt > recentWindow &&
+          !shown.has(reminder.id),
+        )
+        .sort((first, second) => first.scheduledAt - second.scheduledAt)
 
-      const reminderId = `${dueTask.id}:due-now:${dueTask.dueDate}T${dueTask.dueTime}`
-      shown.add(reminderId)
+      const reminder = pendingReminders[0]
+      if (!reminder) return
+
+      shown.add(reminder.id)
       window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
       setInAppNotification({
-        title: 'Tarea para ahora',
-        body: dueTask.title,
-        tag: reminderId,
+        title: reminder.title,
+        body: reminder.task.title,
+        tag: reminder.id,
         url: '/',
       })
     }
