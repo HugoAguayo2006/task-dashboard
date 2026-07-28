@@ -163,12 +163,6 @@ function App() {
     return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage)
   }, [])
 
-  useEffect(() => {
-    if (!inAppNotification) return
-    const timeout = window.setTimeout(() => setInAppNotification(null), 8_000)
-    return () => window.clearTimeout(timeout)
-  }, [inAppNotification])
-
   useLayoutEffect(() => {
     workspaceRef.current?.scrollTo({ left: 0, top: 0 })
     window.scrollTo({ left: 0, top: 0 })
