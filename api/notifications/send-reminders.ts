@@ -127,7 +127,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
           title: reminder.label,
           body: reminder.task.title,
           tag: reminder.id,
-          url: '/',
+          url: '/?view=today',
         }))
         sent += 1
       } catch (error) {

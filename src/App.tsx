@@ -53,6 +53,11 @@ function readSavedTheme(): ThemeMode {
   return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
 }
 
+function readInitialView(): AppView {
+  if (typeof window === 'undefined') return 'lists'
+  return new URLSearchParams(window.location.search).get('view') === 'today' ? 'today' : 'lists'
+}
+
 function mergeInitialLists(lists: typeof initialLists) {
   const currentIds = new Set(lists.map((list) => list.id))
   const missingLists = initialLists.filter((list) => !currentIds.has(list.id))
@@ -60,7 +65,7 @@ function mergeInitialLists(lists: typeof initialLists) {
 }
 
 function App() {
-  const [view, setView] = useState<AppView>('lists')
+  const [view, setView] = useState<AppView>(readInitialView)
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
   const [filters, setFilters] = useState<TaskFilters>(initialFilters)
   const [todayFilters, setTodayFilters] = useState<TodayFilters>(initialTodayFilters)
