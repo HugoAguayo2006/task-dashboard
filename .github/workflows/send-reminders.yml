@@ -1,25 +1,20 @@
 name: Enviar recordatorios
 
 on:
-  schedule:
-    # GitHub puede omitir ejecuciones frecuentes. Iniciamos un monitor cada hora y el
-    # propio job revisa una vez por minuto para no depender de esos disparos perdidos.
-    - cron: '2 * * * *'
+  # Supabase Cron ejecuta el monitor cada minuto. Conservamos esta accion solamente
+  # para diagnosticos manuales desde GitHub.
   workflow_dispatch:
 
 jobs:
   send-reminders:
     runs-on: ubuntu-latest
-    timeout-minutes: 62
+    timeout-minutes: 2
     steps:
       - name: Revisar tareas próximas
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          for minute in $(seq 1 60); do
-            curl --fail --silent --show-error \
-              --retry 2 \
-              -H "Authorization: Bearer ${CRON_SECRET}" \
-              https://task-dashboard-flame-beta.vercel.app/api/notifications/send-reminders
-            if [ "$minute" -lt 60 ]; then sleep 60; fi
-          done
+          curl --fail --silent --show-error \
+            --retry 2 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://task-dashboard-flame-beta.vercel.app/api/notifications/send-reminders

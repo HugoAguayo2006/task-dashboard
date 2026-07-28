@@ -9,6 +9,8 @@ type Task = {
   dueTime?: string
   priority?: 'low' | 'medium' | 'high'
   completed?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
 type Reminder = { id: string; task: Task; scheduledAt: Date; label: string }
@@ -57,7 +59,11 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
       reminders.push({ id: `${task.id}:${kind}:${scheduledAt.toISOString()}`, task, scheduledAt, label })
     }
   }
-  return reminders
+  // No recuperamos avisos cuya hora ya habia pasado cuando la tarea se creo o edito.
+  // El margen permite crear una tarea exactamente a una hora de su vencimiento.
+  const changedAt = Date.parse(task.updatedAt || task.createdAt || '')
+  if (!Number.isFinite(changedAt)) return reminders
+  return reminders.filter((reminder) => reminder.scheduledAt.getTime() >= changedAt - 60_000)
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
