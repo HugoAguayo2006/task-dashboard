@@ -399,8 +399,10 @@ function App() {
             className="in-app-notification-content"
             type="button"
             onClick={() => {
-              const target = new URL(inAppNotification.url, window.location.origin)
-              if (target.origin === window.location.origin) window.location.assign(target.href)
+              setView('today')
+              setSidebarOpen(false)
+              setInAppNotification(null)
+              window.scrollTo({ left: 0, top: 0 })
             }}
           >
             <img src="/web-app-manifest-192x192.png" alt="" />
