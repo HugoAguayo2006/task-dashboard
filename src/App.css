@@ -2199,6 +2199,71 @@
   width: 100%;
 }
 
+.priority-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  width: 100%;
+}
+
+.priority-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-soft);
+  background: var(--surface-muted);
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.priority-option:hover:not(:disabled) {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.priority-option > span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.priority-option-low.active {
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.65);
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.priority-option-medium.active {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.7);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.priority-option-high.active {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.72);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.theme-light .priority-option-low.active {
+  color: #166534;
+}
+
+.theme-light .priority-option-medium.active {
+  color: #92400e;
+}
+
+.theme-light .priority-option-high.active {
+  color: #991b1b;
+}
+
 .detail-time-field {
   width: 100%;
 }
@@ -2239,7 +2304,8 @@
 
 .save-date-button:disabled,
 .details-date-shortcuts button:disabled,
-.details-date-control input:disabled {
+.details-date-control input:disabled,
+.priority-option:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }

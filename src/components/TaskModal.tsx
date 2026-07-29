@@ -18,6 +18,7 @@ type TaskModalProps = {
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
   onEdit: (task: Task) => void
+  onSaveTaskPriority: (task: Task, priority: TaskPriority) => Promise<DateSaveResult>
   onSaveTaskDate: (task: Task, dueDate: string, dueTime: string) => Promise<DateSaveResult>
   onSave: (draft: TaskDraft) => void
 }
@@ -144,6 +145,7 @@ export function TaskModal({
   onDelete,
   onDeleteSeries,
   onEdit,
+  onSaveTaskPriority,
   onSaveTaskDate,
   onSave,
 }: TaskModalProps) {
@@ -155,8 +157,11 @@ export function TaskModal({
   const [occurrencesText, setOccurrencesText] = useState(String(emptyDraft.repeat.occurrences))
   const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
   const [detailDueTime, setDetailDueTime] = useState(task?.dueTime ?? '')
+  const [detailPriority, setDetailPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
   const [showDetailTimePicker, setShowDetailTimePicker] = useState(false)
   const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
+  const [prioritySaveStatus, setPrioritySaveStatus] = useState<DateSaveStatus>('idle')
+  const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving'
 
   useEffect(() => {
     const defaultListId =
@@ -184,18 +189,20 @@ export function TaskModal({
 
   useEffect(() => {
     setDateSaveStatus('idle')
+    setPrioritySaveStatus('idle')
   }, [task?.id])
 
   useEffect(() => {
     setDetailDueDate(task?.dueDate ?? '')
     setDetailDueTime(task?.dueTime ?? '')
+    setDetailPriority(task?.priority ?? 'medium')
     setShowDetailTimePicker(false)
-  }, [task?.id, task?.dueDate, task?.dueTime])
+  }, [task?.id, task?.dueDate, task?.dueTime, task?.priority])
 
   const closeModal = useCallback(() => {
-    if (dateSaveStatus === 'saving') return
+    if (isSavingDetail) return
     onClose()
-  }, [dateSaveStatus, onClose])
+  }, [isSavingDetail, onClose])
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -259,6 +266,16 @@ export function TaskModal({
       setDateSaveStatus('error')
     }
   }
+  const saveTaskPriority = async () => {
+    if (!task || task.source !== 'manual' || detailPriority === task.priority) return
+    setPrioritySaveStatus('saving')
+    try {
+      const result = await onSaveTaskPriority(task, detailPriority)
+      setPrioritySaveStatus(result)
+    } catch {
+      setPrioritySaveStatus('error')
+    }
+  }
   const changeRepeatPreset = (preset: RepeatPreset) => {
     setDraft((current) => ({
       ...current,
@@ -302,7 +319,7 @@ export function TaskModal({
         <button
           aria-label="Cerrar modal"
           className="modal-close"
-          disabled={dateSaveStatus === 'saving'}
+          disabled={isSavingDetail}
           type="button"
           onClick={closeModal}
         >
@@ -442,10 +459,59 @@ export function TaskModal({
                   </dd>
                 </div>
               ) : null}
-              <div>
-                <dt>Prioridad</dt>
-                <dd>{task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}</dd>
-              </div>
+              {task.source === 'manual' ? (
+                <div className="details-date-control details-priority-control">
+                  <dt>Cambiar prioridad</dt>
+                  <dd>
+                    <div className="priority-picker" aria-label="Cambiar prioridad de la tarea" role="group">
+                      {([
+                        ['low', 'Baja'],
+                        ['medium', 'Media'],
+                        ['high', 'Alta'],
+                      ] as Array<[TaskPriority, string]>).map(([priority, label]) => (
+                        <button
+                          aria-pressed={detailPriority === priority}
+                          className={`priority-option priority-option-${priority} ${detailPriority === priority ? 'active' : ''}`}
+                          disabled={prioritySaveStatus === 'saving'}
+                          key={priority}
+                          type="button"
+                          onClick={() => {
+                            setDetailPriority(priority)
+                            setPrioritySaveStatus('idle')
+                          }}
+                        >
+                          <span aria-hidden="true" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="save-date-button"
+                      disabled={prioritySaveStatus === 'saving' || detailPriority === task.priority}
+                      type="button"
+                      onClick={saveTaskPriority}
+                    >
+                      {prioritySaveStatus === 'saving' ? 'Guardando...' : 'Guardar prioridad'}
+                    </button>
+                    {prioritySaveStatus !== 'idle' ? (
+                      <p className={`date-save-message ${prioritySaveStatus}`}>
+                        {prioritySaveStatus === 'saving'
+                          ? 'Sincronizando con la nube...'
+                          : prioritySaveStatus === 'synced'
+                            ? 'Prioridad sincronizada en la nube.'
+                            : prioritySaveStatus === 'local'
+                              ? 'Prioridad guardada localmente.'
+                              : 'No se pudo guardar. Intenta de nuevo.'}
+                      </p>
+                    ) : null}
+                  </dd>
+                </div>
+              ) : (
+                <div>
+                  <dt>Prioridad</dt>
+                  <dd>{task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}</dd>
+                </div>
+              )}
               <div>
                 <dt>Estado</dt>
                 <dd>{task.completed ? 'Completada' : 'Pendiente'}</dd>

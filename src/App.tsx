@@ -18,8 +18,8 @@ import { useTasks } from './hooks/useTasks'
 import { initialLists } from './data/initialWorkspace'
 import { fetchSyncState, saveSyncState } from './services/syncApi'
 import type { SyncStatus } from './types/sync'
-import type { AppView, CalendarMode, Task, TaskFilters } from './types/task'
-import { addDaysISO, filterTasks, sortTasksByDueDate } from './utils/dates'
+import type { AppView, CalendarMode, Task, TaskFilters, TaskPriority } from './types/task'
+import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from './utils/dates'
 import { mergeInitialTasks } from './utils/mergeTasks'
 
 const initialFilters: TaskFilters = {
@@ -405,6 +405,69 @@ function App() {
     }
   }
 
+  const handleSaveTaskPriority = async (task: Task, priority: TaskPriority) => {
+    if (task.source !== 'manual' || task.priority === priority) {
+      return syncDisabled.current ? 'local' : 'synced'
+    }
+
+    const timestamp = new Date().toISOString()
+    const nextTasks = tasksState.tasks.map((currentTask) =>
+      currentTask.id === task.id
+        ? { ...currentTask, priority, updatedAt: timestamp }
+        : currentTask,
+    )
+    const state = {
+      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
+      lists: listsState.lists,
+      tasks: nextTasks,
+      updatedAt: timestamp,
+    }
+
+    const showHighPriorityAlert = () => {
+      if (priority !== 'high' || task.completed || task.dueDate !== todayISO()) return
+      const tag = `${task.id}:high-day:${task.dueDate}`
+      const shown = new Set<string>(
+        JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
+      )
+      if (shown.has(tag)) return
+      shown.add(tag)
+      window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
+      setInAppNotifications((current) => [
+        ...current.filter((notification) => notification.tag !== tag),
+        { title: 'Prioridad alta para hoy', body: task.title, tag, url: '/?view=today' },
+      ])
+    }
+
+    if (syncDisabled.current) {
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+      setSyncStatus('local')
+      showHighPriorityAlert()
+      return 'local'
+    }
+
+    setSyncStatus('saving')
+    try {
+      const result = await saveSyncState(state)
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+      showHighPriorityAlert()
+
+      if (result.disabled) {
+        syncDisabled.current = true
+        setSyncStatus('local')
+        return 'local'
+      }
+
+      lastSavedCloudState.current = JSON.stringify(state)
+      setSyncStatus('synced')
+      return 'synced'
+    } catch (error) {
+      setSyncStatus('error')
+      throw error
+    }
+  }
+
   return (
     <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {inAppNotifications.length ? (
@@ -641,6 +704,7 @@ function App() {
             setEditingTask(task)
             setIsCreatingTask(true)
           }}
+          onSaveTaskPriority={handleSaveTaskPriority}
           onSaveTaskDate={handleSaveTaskDate}
           onSave={(payload) => {
             if (editingTask) {
