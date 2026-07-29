@@ -42,9 +42,7 @@ export function CalendarView({
   const [dropDate, setDropDate] = useState<string | null>(null)
   const [visibleDate, setVisibleDate] = useState(() => new Date())
   const today = todayISO()
-  const sortedTasks = sortCalendarTasks(
-    tasks.filter((task) => task.completed || !task.dueDate || task.dueDate >= today),
-  )
+  const sortedTasks = sortCalendarTasks(tasks)
 
   const dropTaskOnDate = (date: string) => {
     if (!draggedTask) return
