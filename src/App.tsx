@@ -592,19 +592,36 @@ function App() {
                 <span>Ajustes</span>
               </button>
               {settingsOpen ? (
-                <div
-                  className="settings-panel"
-                  id="settings-panel"
-                  role="dialog"
-                  aria-label="Ajustes de sincronización"
-                >
-                  <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
-                  <ExternalCalendarStatus
-                    status={externalCalendarState.status}
-                    onRefresh={externalCalendarState.refresh}
-                  />
-                  <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
-                  <NotificationStatus />
+                <div className="settings-backdrop" onClick={() => setSettingsOpen(false)}>
+                  <div
+                    className="settings-panel"
+                    id="settings-panel"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Ajustes de sincronización"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="settings-panel-header">
+                      <strong>Ajustes</strong>
+                      <button
+                        aria-label="Cerrar ajustes"
+                        className="settings-close"
+                        type="button"
+                        onClick={() => setSettingsOpen(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="settings-panel-content">
+                      <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
+                      <ExternalCalendarStatus
+                        status={externalCalendarState.status}
+                        onRefresh={externalCalendarState.refresh}
+                      />
+                      <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
+                      <NotificationStatus />
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>

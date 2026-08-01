@@ -479,6 +479,10 @@
   position: relative;
 }
 
+.settings-backdrop {
+  display: contents;
+}
+
 .settings-panel {
   position: absolute;
   z-index: 40;
@@ -492,13 +496,17 @@
   box-shadow: var(--shadow);
 }
 
+.settings-panel-header {
+  display: none;
+}
+
 .settings-panel .canvas-status,
 .settings-panel .sync-status,
 .settings-panel .notification-status {
   box-shadow: none;
 }
 
-.settings-panel > :last-child {
+.settings-panel-content > :last-child {
   margin-bottom: 0;
 }
 
@@ -2960,14 +2968,83 @@
   }
 
   .settings-panel {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-height: min(78dvh, 680px);
+    padding: 0;
+    overflow: hidden;
+    border-radius: 18px 18px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.34);
+  }
+
+  .settings-backdrop {
     position: fixed;
-    top: auto;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    width: auto;
-    max-height: calc(100dvh - 24px);
+    z-index: 100;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(3, 7, 18, 0.62);
+    backdrop-filter: blur(3px);
+    overscroll-behavior: contain;
+  }
+
+  .settings-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 58px;
+    padding: 10px 14px 10px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-strong);
+    font-size: 18px;
+  }
+
+  .settings-close {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    color: var(--text);
+    background: var(--accent-soft);
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .settings-panel-content {
+    max-height: calc(min(78dvh, 680px) - 58px);
+    padding: 12px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-panel .canvas-status,
+  .settings-panel .sync-status,
+  .settings-panel .notification-status {
+    gap: 10px;
+    padding: 11px 12px;
+    margin-bottom: 9px;
+  }
+
+  .settings-panel .canvas-status,
+  .settings-panel .sync-status {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .settings-panel .canvas-status button,
+  .settings-panel .sync-status button {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .settings-panel .notification-status {
+    font-size: 14px;
   }
 
   .primary-button,
