@@ -442,7 +442,8 @@
   min-width: 0;
 }
 
-.theme-toggle {
+.theme-toggle,
+.settings-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -456,12 +457,15 @@
   font-weight: 800;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.settings-toggle:hover,
+.settings-toggle[aria-expanded='true'] {
   border-color: color-mix(in srgb, var(--accent) 42%, transparent);
   background: var(--accent-soft);
 }
 
-.theme-toggle span:first-child {
+.theme-toggle span:first-child,
+.settings-toggle span:first-child {
   display: grid;
   width: 22px;
   height: 22px;
@@ -469,6 +473,33 @@
   color: var(--accent);
   font-size: 17px;
   line-height: 1;
+}
+
+.settings-menu {
+  position: relative;
+}
+
+.settings-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(620px, calc(100vw - 40px));
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.settings-panel .canvas-status,
+.settings-panel .sync-status,
+.settings-panel .notification-status {
+  box-shadow: none;
+}
+
+.settings-panel > :last-child {
+  margin-bottom: 0;
 }
 
 .topbar h1,
@@ -2894,6 +2925,8 @@
   .sync-status button,
   .topbar .primary-button,
   .theme-toggle,
+  .settings-toggle,
+  .settings-menu,
   .topbar-actions {
     width: 100%;
   }
@@ -2919,6 +2952,22 @@
 
   .theme-toggle {
     min-height: 44px;
+  }
+
+  .settings-toggle {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .settings-panel {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
   }
 
   .primary-button,

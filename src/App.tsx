@@ -76,6 +76,7 @@ function App() {
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
   const [theme, setTheme] = useState<ThemeMode>(readSavedTheme)
   const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([])
@@ -85,6 +86,7 @@ function App() {
   const lastSavedCloudState = useRef('')
   const skipNextAutosync = useRef(false)
   const workspaceRef = useRef<HTMLElement | null>(null)
+  const settingsRef = useRef<HTMLDivElement | null>(null)
 
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
@@ -150,6 +152,24 @@ function App() {
     document.body.style.backgroundColor = themeColor
     themeColorMeta?.setAttribute('content', themeColor)
   }, [theme])
+
+  useEffect(() => {
+    if (!settingsOpen) return
+
+    const closeSettings = (event: PointerEvent) => {
+      if (!settingsRef.current?.contains(event.target as Node)) setSettingsOpen(false)
+    }
+    const closeSettingsWithKeyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSettingsOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeSettings)
+    document.addEventListener('keydown', closeSettingsWithKeyboard)
+    return () => {
+      document.removeEventListener('pointerdown', closeSettings)
+      document.removeEventListener('keydown', closeSettingsWithKeyboard)
+    }
+  }, [settingsOpen])
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
@@ -556,6 +576,38 @@ function App() {
             </div>
           </div>
           <div className="topbar-actions">
+            <div
+              className="settings-menu"
+              ref={settingsRef}
+            >
+              <button
+                aria-controls="settings-panel"
+                aria-expanded={settingsOpen}
+                aria-haspopup="true"
+                className="settings-toggle"
+                type="button"
+                onClick={() => setSettingsOpen((open) => !open)}
+              >
+                <span aria-hidden="true">⚙</span>
+                <span>Ajustes</span>
+              </button>
+              {settingsOpen ? (
+                <div
+                  className="settings-panel"
+                  id="settings-panel"
+                  role="dialog"
+                  aria-label="Ajustes de sincronización"
+                >
+                  <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
+                  <ExternalCalendarStatus
+                    status={externalCalendarState.status}
+                    onRefresh={externalCalendarState.refresh}
+                  />
+                  <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
+                  <NotificationStatus />
+                </div>
+              ) : null}
+            </div>
             <button
               aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               aria-pressed={theme === 'light'}
@@ -580,14 +632,6 @@ function App() {
             </button>
           </div>
         </header>
-
-        <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
-        <ExternalCalendarStatus
-          status={externalCalendarState.status}
-          onRefresh={externalCalendarState.refresh}
-        />
-        <SyncStatusBar status={syncStatus} onRefresh={loadCloudState} />
-        <NotificationStatus />
 
         {view !== 'today' && view !== 'tomorrow' ? (
           <FiltersBar
