@@ -82,6 +82,19 @@ Outlook|https://outlook.office365.com/owa/calendar/.../calendar.ics
 
 Esos links son secretos porque dan lectura a tu calendario. No los pongas como `VITE_*` ni los subas a Git.
 
+## Zoom
+
+Chalendar puede leer las reuniones programadas que hospedas en Zoom mediante una app privada **Server-to-Server OAuth**. En Zoom App Marketplace crea la app, agrega el scope granular `meeting:read:list_meetings:admin`, actívala y configura estas variables privadas en Vercel o en `.env.local`:
+
+```bash
+ZOOM_ACCOUNT_ID=tu_account_id
+ZOOM_CLIENT_ID=tu_client_id
+ZOOM_CLIENT_SECRET=tu_client_secret
+ZOOM_USER_ID=tu_correo_de_zoom
+```
+
+Las reuniones aparecen en la lista azul **Zoom**, con fecha, hora y enlace para entrar. Las credenciales se usan únicamente en la función serverless y nunca deben llevar el prefijo `VITE_*`.
+
 ## Calendario de iPhone
 
 Chalendar tambien puede publicar tus tareas manuales como un calendario `.ics` para suscribirlo en la app Calendario de iPhone:

@@ -9,7 +9,7 @@ const labels: Record<ExternalCalendarStatusValue, string> = {
   idle: 'Calendarios externos listos',
   loading: 'Cargando calendarios...',
   ready: 'Calendarios sincronizados',
-  'missing-feeds': 'Falta CHALENDAR_EXTERNAL_CALENDAR_FEEDS',
+  'missing-feeds': 'Falta configurar un calendario externo o Zoom',
   empty: 'No hay reuniones externas en este rango',
   error: 'No se pudo conectar con calendarios',
 }

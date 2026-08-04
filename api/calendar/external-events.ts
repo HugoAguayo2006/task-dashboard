@@ -45,6 +45,16 @@ type RawIcsEvent = {
   rrule?: string
 }
 
+type ZoomMeeting = {
+  id: number
+  uuid?: string
+  topic?: string
+  agenda?: string
+  start_time?: string
+  duration?: number
+  join_url?: string
+}
+
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
@@ -197,6 +207,70 @@ function eventDateTime(date: Date, allDay: boolean) {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function zoomConfig() {
+  const accountId = process.env.ZOOM_ACCOUNT_ID?.trim() || readLocalEnv('ZOOM_ACCOUNT_ID')
+  const clientId = process.env.ZOOM_CLIENT_ID?.trim() || readLocalEnv('ZOOM_CLIENT_ID')
+  const clientSecret = process.env.ZOOM_CLIENT_SECRET?.trim() || readLocalEnv('ZOOM_CLIENT_SECRET')
+  const userId = process.env.ZOOM_USER_ID?.trim() || readLocalEnv('ZOOM_USER_ID')
+  if (!accountId || !clientId || !clientSecret || !userId) return null
+  return { accountId, clientId, clientSecret, userId }
+}
+
+async function fetchZoomMeetings(rangeStart: Date, rangeEnd: Date) {
+  const config = zoomConfig()
+  if (!config) return []
+
+  const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')
+  const tokenParams = new URLSearchParams({
+    grant_type: 'account_credentials',
+    account_id: config.accountId,
+  })
+  const tokenResponse = await fetch(`https://zoom.us/oauth/token?${tokenParams.toString()}`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${credentials}` },
+  })
+  if (!tokenResponse.ok) throw new Error(`Zoom OAuth: ${tokenResponse.status}`)
+  const tokenBody = (await tokenResponse.json()) as { access_token?: string }
+  if (!tokenBody.access_token) throw new Error('Zoom OAuth no devolvio un access token')
+
+  const meetings: ZoomMeeting[] = []
+  let nextPageToken = ''
+  do {
+    const params = new URLSearchParams({ type: 'upcoming', page_size: '300' })
+    if (nextPageToken) params.set('next_page_token', nextPageToken)
+    const meetingsResponse = await fetch(
+      `https://api.zoom.us/v2/users/${encodeURIComponent(config.userId)}/meetings?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${tokenBody.access_token}` } },
+    )
+    if (!meetingsResponse.ok) throw new Error(`Zoom meetings: ${meetingsResponse.status}`)
+    const body = (await meetingsResponse.json()) as {
+      meetings?: ZoomMeeting[]
+      next_page_token?: string
+    }
+    meetings.push(...(body.meetings ?? []))
+    nextPageToken = body.next_page_token ?? ''
+  } while (nextPageToken)
+
+  return meetings.flatMap((meeting): CalendarEvent[] => {
+    if (!meeting.start_time) return []
+    const start = new Date(meeting.start_time)
+    if (Number.isNaN(start.getTime()) || start < rangeStart || start > rangeEnd) return []
+    const end = new Date(start.getTime() + (meeting.duration ?? 0) * 60_000)
+    return [{
+      id: `zoom-${meeting.uuid ?? meeting.id}-${start.getTime()}`,
+      calendarName: 'Zoom',
+      title: meeting.topic || 'Reunion Zoom',
+      description: meeting.agenda,
+      location: 'Zoom',
+      url: meeting.join_url,
+      start: eventDateTime(start, false),
+      end: eventDateTime(end, false),
+      allDay: false,
+      color: '#2d8cff',
+    }]
+  })
 }
 
 function parseRangeDate(value: string | undefined, fallback: Date) {
@@ -356,10 +430,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return
   }
 
-  if (!feeds.length) {
+  if (!feeds.length && !zoomConfig()) {
     response.status(400).json({
       code: 'missing-feeds',
-      error: 'Configura CHALENDAR_EXTERNAL_CALENDAR_FEEDS con tus enlaces privados .ics.',
+      error: 'Configura CHALENDAR_EXTERNAL_CALENDAR_FEEDS o las credenciales de Zoom.',
     })
     return
   }
@@ -371,8 +445,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const rangeEnd = parseRangeDate(first(request.query.end_date), defaultEnd)
 
   try {
-    const results = await Promise.all(
-      feeds.map(async (feed) => {
+    const results = await Promise.all([
+      ...feeds.map(async (feed) => {
         const calendarResponse = await fetch(feed.url, {
           headers: {
             Accept: 'text/calendar,text/plain,*/*',
@@ -397,7 +471,16 @@ export default async function handler(request: VercelRequest, response: VercelRe
           ok: true,
         }
       }),
-    )
+      ...(zoomConfig()
+        ? [fetchZoomMeetings(rangeStart, rangeEnd)
+            .then((events) => ({ events, ok: true }))
+            .catch(() => ({
+              error: { name: 'Zoom', status: 502 },
+              events: [] as CalendarEvent[],
+              ok: false,
+            }))]
+        : []),
+    ])
 
     const events = results
       .flatMap((result) => result.events)
