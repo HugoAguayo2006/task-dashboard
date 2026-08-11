@@ -488,6 +488,53 @@ function App() {
     }
   }
 
+  const handleSaveTaskList = async (task: Task, listId: string) => {
+    if (task.source !== 'manual' || task.listId === listId) {
+      return syncDisabled.current ? 'local' : 'synced'
+    }
+
+    const timestamp = new Date().toISOString()
+    const color = listsState.lists.find((list) => list.id === listId)?.color ?? task.color
+    const nextTasks = tasksState.tasks.map((currentTask) =>
+      currentTask.id === task.id
+        ? { ...currentTask, listId, color, updatedAt: timestamp }
+        : currentTask,
+    )
+    const state = {
+      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
+      lists: listsState.lists,
+      tasks: nextTasks,
+      updatedAt: timestamp,
+    }
+
+    if (syncDisabled.current) {
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+      setSyncStatus('local')
+      return 'local'
+    }
+
+    setSyncStatus('saving')
+    try {
+      const result = await saveSyncState(state)
+      skipNextAutosync.current = true
+      tasksState.replaceTasks(nextTasks)
+
+      if (result.disabled) {
+        syncDisabled.current = true
+        setSyncStatus('local')
+        return 'local'
+      }
+
+      lastSavedCloudState.current = JSON.stringify(state)
+      setSyncStatus('synced')
+      return 'synced'
+    } catch (error) {
+      setSyncStatus('error')
+      throw error
+    }
+  }
+
   return (
     <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {inAppNotifications.length ? (
@@ -765,6 +812,7 @@ function App() {
             setEditingTask(task)
             setIsCreatingTask(true)
           }}
+          onSaveTaskList={handleSaveTaskList}
           onSaveTaskPriority={handleSaveTaskPriority}
           onSaveTaskDate={handleSaveTaskDate}
           onSave={(payload) => {

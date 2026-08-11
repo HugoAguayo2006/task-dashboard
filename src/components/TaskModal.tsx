@@ -18,6 +18,7 @@ type TaskModalProps = {
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
   onEdit: (task: Task) => void
+  onSaveTaskList: (task: Task, listId: string) => Promise<DateSaveResult>
   onSaveTaskPriority: (task: Task, priority: TaskPriority) => Promise<DateSaveResult>
   onSaveTaskDate: (task: Task, dueDate: string, dueTime: string) => Promise<DateSaveResult>
   onSave: (draft: TaskDraft) => void
@@ -145,6 +146,7 @@ export function TaskModal({
   onDelete,
   onDeleteSeries,
   onEdit,
+  onSaveTaskList,
   onSaveTaskPriority,
   onSaveTaskDate,
   onSave,
@@ -158,10 +160,12 @@ export function TaskModal({
   const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
   const [detailDueTime, setDetailDueTime] = useState(task?.dueTime ?? '')
   const [detailPriority, setDetailPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
+  const [detailListId, setDetailListId] = useState(task?.listId ?? '')
   const [showDetailTimePicker, setShowDetailTimePicker] = useState(false)
   const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
   const [prioritySaveStatus, setPrioritySaveStatus] = useState<DateSaveStatus>('idle')
-  const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving'
+  const [listSaveStatus, setListSaveStatus] = useState<DateSaveStatus>('idle')
+  const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving' || listSaveStatus === 'saving'
 
   useEffect(() => {
     const defaultListId =
@@ -190,14 +194,16 @@ export function TaskModal({
   useEffect(() => {
     setDateSaveStatus('idle')
     setPrioritySaveStatus('idle')
+    setListSaveStatus('idle')
   }, [task?.id])
 
   useEffect(() => {
     setDetailDueDate(task?.dueDate ?? '')
     setDetailDueTime(task?.dueTime ?? '')
     setDetailPriority(task?.priority ?? 'medium')
+    setDetailListId(task?.listId ?? '')
     setShowDetailTimePicker(false)
-  }, [task?.id, task?.dueDate, task?.dueTime, task?.priority])
+  }, [task?.id, task?.dueDate, task?.dueTime, task?.listId, task?.priority])
 
   const closeModal = useCallback(() => {
     if (isSavingDetail) return
@@ -274,6 +280,16 @@ export function TaskModal({
       setPrioritySaveStatus(result)
     } catch {
       setPrioritySaveStatus('error')
+    }
+  }
+  const saveTaskList = async () => {
+    if (!task || task.source !== 'manual' || !detailListId || detailListId === task.listId) return
+    setListSaveStatus('saving')
+    try {
+      const result = await onSaveTaskList(task, detailListId)
+      setListSaveStatus(result)
+    } catch {
+      setListSaveStatus('error')
     }
   }
   const changeRepeatPreset = (preset: RepeatPreset) => {
@@ -456,6 +472,45 @@ export function TaskModal({
                           ? 'Guardar hora'
                           : 'Quitar hora'}
                     </button>
+                  </dd>
+                </div>
+              ) : null}
+              {task.source === 'manual' ? (
+                <div className="details-date-control details-list-control">
+                  <dt>Cambiar lista</dt>
+                  <dd>
+                    <select
+                      aria-label="Cambiar lista de la tarea"
+                      disabled={listSaveStatus === 'saving'}
+                      value={detailListId}
+                      onChange={(event) => {
+                        setDetailListId(event.target.value)
+                        setListSaveStatus('idle')
+                      }}
+                    >
+                      {lists.map((list) => (
+                        <option key={list.id} value={list.id}>{list.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      className="save-date-button"
+                      disabled={listSaveStatus === 'saving' || !detailListId || detailListId === task.listId}
+                      type="button"
+                      onClick={saveTaskList}
+                    >
+                      {listSaveStatus === 'saving' ? 'Guardando...' : 'Guardar lista'}
+                    </button>
+                    {listSaveStatus !== 'idle' ? (
+                      <p className={`date-save-message ${listSaveStatus}`}>
+                        {listSaveStatus === 'saving'
+                          ? 'Sincronizando con la nube...'
+                          : listSaveStatus === 'synced'
+                            ? 'Lista sincronizada en la nube.'
+                            : listSaveStatus === 'local'
+                              ? 'Lista guardada localmente.'
+                              : 'No se pudo guardar. Intenta de nuevo.'}
+                      </p>
+                    ) : null}
                   </dd>
                 </div>
               ) : null}
