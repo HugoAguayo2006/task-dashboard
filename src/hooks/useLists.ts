@@ -38,6 +38,12 @@ export function useLists() {
     )
   }
 
+  const toggleListVisibility = (id: string) => {
+    setLists((current) =>
+      current.map((list) => (list.id === id ? { ...list, hidden: !list.hidden } : list)),
+    )
+  }
+
   const deleteList = (id: string) => {
     if (lists.length <= 1) return
     setLists((current) => current.filter((list) => list.id !== id))
@@ -62,5 +68,5 @@ export function useLists() {
     setLists(nextLists)
   }
 
-  return { createList, deleteList, lists, reorderLists, replaceLists, updateList }
+  return { createList, deleteList, lists, reorderLists, replaceLists, toggleListVisibility, updateList }
 }

@@ -236,6 +236,23 @@ function App() {
     [canvasState.tasks, externalCalendarState.tasks, tasksState.tasks],
   )
 
+  const visibleLists = useMemo(
+    () => listsState.lists.filter((list) => !list.hidden),
+    [listsState.lists],
+  )
+  const visibleTasks = useMemo(() => {
+    const visibleListIds = new Set(visibleLists.map((list) => list.id))
+    return allTasks.filter((task) => visibleListIds.has(task.listId))
+  }, [allTasks, visibleLists])
+
+  useEffect(() => {
+    const hiddenListIds = new Set(listsState.lists.filter((list) => list.hidden).map((list) => list.id))
+    if (!hiddenListIds.size) return
+    setFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
+    setTodayFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
+    setTomorrowFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
+  }, [listsState.lists])
+
   useEffect(() => {
     const checkDueTasks = () => {
       const now = Date.now()
@@ -301,17 +318,17 @@ function App() {
   const boardTasks = useMemo(
     () =>
       sortTasksByDueDate(
-        filterTasks(allTasks, {
+        filterTasks(visibleTasks, {
           ...filters,
           status: 'all',
         }),
       ),
-    [allTasks, filters],
+    [visibleTasks, filters],
   )
 
   const calendarTasks = useMemo(
-    () => sortTasksByDueDate(filterTasks(allTasks, { ...filters, status: 'all' })),
-    [allTasks, filters],
+    () => sortTasksByDueDate(filterTasks(visibleTasks, { ...filters, status: 'all' })),
+    [visibleTasks, filters],
   )
 
   const selectedList = filters.listId === 'all'
@@ -588,6 +605,7 @@ function App() {
         }}
         onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
         onToggleOpen={() => setSidebarOpen((open) => !open)}
+        onToggleListVisibility={listsState.toggleListVisibility}
         onUpdateList={listsState.updateList}
         onViewChange={(nextView) => {
           setView(nextView)
@@ -701,7 +719,7 @@ function App() {
           <FiltersBar
             calendarMode={calendarMode}
             filters={filters}
-            lists={listsState.lists}
+            lists={visibleLists}
             showCalendarModes={view === 'calendar'}
             onCalendarModeChange={setCalendarMode}
             onFiltersChange={setFilters}
@@ -710,9 +728,9 @@ function App() {
 
         {view === 'lists' ? (
           <Dashboard
-            lists={listsState.lists}
+            lists={visibleLists}
             tasks={boardTasks}
-            allTasks={allTasks}
+            allTasks={visibleTasks}
             completedOnly={false}
             onComplete={handleComplete}
             onDelete={handleDelete}
@@ -728,8 +746,8 @@ function App() {
         {view === 'today' ? (
           <TodayPage
             filters={todayFilters}
-            lists={listsState.lists}
-            tasks={allTasks}
+            lists={visibleLists}
+            tasks={visibleTasks}
             onComplete={handleComplete}
             onCreateTodayTask={() => {
               setNewTaskDueDate(undefined)
@@ -750,8 +768,8 @@ function App() {
           <TodayPage
             day="tomorrow"
             filters={tomorrowFilters}
-            lists={listsState.lists}
-            tasks={allTasks}
+            lists={visibleLists}
+            tasks={visibleTasks}
             onComplete={handleComplete}
             onCreateTodayTask={() => {
               setNewTaskDueDate(addDaysISO(1))
@@ -781,7 +799,7 @@ function App() {
         {view === 'canvas' ? (
           <CanvasPage
             canvasState={canvasState}
-            tasks={filterTasks(canvasState.tasks, {
+            tasks={filterTasks(visibleTasks, {
               ...filters,
               source: 'canvas',
               status: filters.status,

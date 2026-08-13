@@ -9,6 +9,7 @@ type ListManagerProps = {
   tasks?: Task[]
   onCreate: (name: string, color: string) => void
   onDelete: (id: string) => void
+  onToggleVisibility: (id: string) => void
   onUpdate: (id: string, updates: Pick<TaskList, 'name' | 'color'>) => void
 }
 
@@ -17,6 +18,7 @@ export function ListManager({
   tasks = [],
   onCreate,
   onDelete,
+  onToggleVisibility,
   onUpdate,
 }: ListManagerProps) {
   const [name, setName] = useState('')
@@ -54,7 +56,7 @@ export function ListManager({
 
       <div className="manager-list">
         {lists.map((list) => (
-          <div className="manager-row" key={list.id}>
+          <div className={`manager-row ${list.hidden ? 'is-hidden' : ''}`} key={list.id}>
             <input
               aria-label={`Color de ${list.name}`}
               type="color"
@@ -77,6 +79,16 @@ export function ListManager({
                 )}
               </span>
             ) : null}
+            <button
+              aria-label={`${list.hidden ? 'Mostrar' : 'Ocultar'} ${list.name} en las vistas`}
+              aria-pressed={list.hidden}
+              className="list-visibility-button"
+              title={list.hidden ? 'Mostrar lista' : 'Ocultar lista'}
+              type="button"
+              onClick={() => onToggleVisibility(list.id)}
+            >
+              <span aria-hidden="true">{list.hidden ? '◌' : '●'}</span>
+            </button>
             <button aria-label={`Eliminar ${list.name}`} type="button" onClick={() => onDelete(list.id)}>
               ×
             </button>

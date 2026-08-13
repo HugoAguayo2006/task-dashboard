@@ -3,4 +3,5 @@ export type TaskList = {
   name: string
   color: string
   createdAt: string
+  hidden?: boolean
 }

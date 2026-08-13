@@ -14,6 +14,7 @@ type SidebarProps = {
   onSelectList: (listId: string) => void
   onToggleCollapsed: () => void
   onToggleOpen: () => void
+  onToggleListVisibility: (id: string) => void
   onUpdateList: (id: string, updates: Pick<TaskList, 'name' | 'color'>) => void
   onViewChange: (view: AppView) => void
 }
@@ -38,6 +39,7 @@ export function Sidebar({
   onSelectList,
   onToggleCollapsed,
   onToggleOpen,
+  onToggleListVisibility,
   onUpdateList,
   onViewChange,
 }: SidebarProps) {
@@ -92,11 +94,12 @@ export function Sidebar({
             tasks={tasks}
             onCreate={onCreateList}
             onDelete={onDeleteList}
+            onToggleVisibility={onToggleListVisibility}
             onUpdate={onUpdateList}
           />
         ) : (
           <div className="collapsed-list-dots" aria-label="Listas">
-            {lists.map((list) => (
+            {lists.filter((list) => !list.hidden).map((list) => (
               <button key={list.id} type="button" onClick={() => onSelectList(list.id)}>
                 <span className="color-dot" style={{ background: list.color }}></span>
               </button>

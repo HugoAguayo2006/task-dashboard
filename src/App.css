@@ -1810,10 +1810,24 @@
 
 .manager-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 26px 34px;
+  grid-template-columns: 42px minmax(0, 1fr) 26px 34px 34px;
   gap: 8px;
   width: 100%;
   min-width: 0;
+}
+
+.manager-row.is-hidden input,
+.manager-row.is-hidden .manager-count {
+  opacity: 0.5;
+}
+
+.manager-row .list-visibility-button {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.manager-row .list-visibility-button:hover {
+  color: var(--text);
 }
 
 .manager-count {
