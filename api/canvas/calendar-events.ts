@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 type VercelRequest = {
   query: Record<string, string | string[] | undefined>
 }

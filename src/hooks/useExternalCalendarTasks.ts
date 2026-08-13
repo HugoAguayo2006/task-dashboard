@@ -4,7 +4,7 @@ import { readStorage, writeStorage } from '../services/storageService'
 import type { ExternalCalendarStatus } from '../types/externalCalendar'
 import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
-import { addDaysISO, todayISO } from '../utils/dates'
+import { addDaysISO } from '../utils/dates'
 
 type ExternalCalendarLocalState = {
   hiddenIds: string[]
@@ -68,7 +68,8 @@ export function useExternalCalendarTasks(lists: TaskList[]) {
   const refresh = useCallback(async () => {
     setStatus('loading')
     try {
-      const startDate = todayISO()
+      // Keep recent events available while the user navigates previous days/months.
+      const startDate = addDaysISO(-120)
       const endDate = addDaysISO(120)
       const events = await fetchExternalCalendarEvents(startDate, endDate)
       const mapped = events

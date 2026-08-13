@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import process from 'node:process'
 
 type VercelRequest = {
   query: Record<string, string | string[] | undefined>
@@ -32,6 +33,12 @@ type CalendarEvent = {
   recurrenceInterval?: number
   recurrenceTotal?: number
   recurrenceUnit?: 'day' | 'week' | 'month'
+}
+
+type CalendarFetchResult = {
+  events: CalendarEvent[]
+  ok: boolean
+  error?: { name: string; status: number }
 }
 
 type RawIcsEvent = {
@@ -445,7 +452,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const rangeEnd = parseRangeDate(first(request.query.end_date), defaultEnd)
 
   try {
-    const results = await Promise.all([
+    const results: CalendarFetchResult[] = await Promise.all([
       ...feeds.map(async (feed) => {
         const calendarResponse = await fetch(feed.url, {
           headers: {
