@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   enableNotifications,
   getNotificationStatus,
+  reconnectNotifications,
   type NotificationStatus as Status,
 } from '../services/notificationService'
 
@@ -20,6 +21,22 @@ export function NotificationStatus() {
     return (
       <section className="notification-status status-synced">
         <div><strong>Recordatorios activados</strong><small>Prioridad alta a las 8:00 · tareas con hora: 1 día antes, 1 hora antes y a la hora indicada</small></div>
+        <button
+          type="button"
+          onClick={async () => {
+            setStatus('loading')
+            setError('')
+            try {
+              await reconnectNotifications()
+              setStatus('enabled')
+            } catch (caught) {
+              setError(caught instanceof Error ? caught.message : 'No se pudieron reconectar las notificaciones.')
+              setStatus('prompt')
+            }
+          }}
+        >
+          Reconectar notificaciones
+        </button>
       </section>
     )
   }

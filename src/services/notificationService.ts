@@ -76,3 +76,30 @@ export async function enableNotifications() {
   })
   await registerSubscription(subscription)
 }
+
+export async function reconnectNotifications() {
+  if (!isIOSDevice() || !isStandaloneWebApp()) {
+    throw new Error('Abre Chalendar desde el ícono instalado en tu pantalla de inicio.')
+  }
+  if (Notification.permission !== 'granted') {
+    throw new Error('Primero permite las notificaciones de Chalendar en Ajustes.')
+  }
+
+  const registration = await navigator.serviceWorker.register('/service-worker.js')
+  await navigator.serviceWorker.ready
+  const keyResponse = await fetch(subscriptionUrl)
+  const keyPayload = (await keyResponse.json().catch(() => ({}))) as { publicKey?: string; error?: string }
+  if (!keyResponse.ok || !keyPayload.publicKey) {
+    throw new Error(keyPayload.error ?? 'No se pudo consultar la configuración de notificaciones.')
+  }
+
+  const existing = await registration.pushManager.getSubscription()
+  if (existing && !await existing.unsubscribe()) {
+    throw new Error('El iPhone no pudo eliminar la suscripción anterior.')
+  }
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: decodeBase64Url(keyPayload.publicKey),
+  })
+  await registerSubscription(subscription)
+}
