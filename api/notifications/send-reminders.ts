@@ -138,7 +138,14 @@ export default async function handler(request: VercelRequest, response: VercelRe
           body: reminder.task.title,
           tag: reminder.id,
           url: '/?view=today',
-        }))
+        }), reminder.kind === 'one-hour'
+          ? {
+              // Apple puede diferir los pushes con urgencia normal. Este aviso
+              // pierde utilidad si llega tarde, por eso se entrega de inmediato.
+              urgency: 'high',
+              TTL: 60 * 60,
+            }
+          : undefined)
         sent += 1
       } catch (error) {
         failed += 1
