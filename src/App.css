@@ -1963,6 +1963,7 @@
   left: 10px;
   right: 10px;
   height: 36px;
+  pointer-events: none;
   border-radius: 8px;
   background: var(--control-hover);
 }
@@ -2747,6 +2748,18 @@
 
   .topbar-actions {
     margin-top: 76px;
+  }
+
+  .time-wheel-popover {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+  }
+
+  .time-wheel-actions button {
+    min-height: 44px;
+    touch-action: manipulation;
   }
 
   .topbar h1 {
