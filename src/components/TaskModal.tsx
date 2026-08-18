@@ -700,8 +700,8 @@ export function TaskModal({
                   ) : null}
                 </div>
               </label>
-              <label>
-                Hora
+              <div className="task-form-field">
+                <span>Hora</span>
                 <div className="time-field">
                   <button className="time-picker-trigger" type="button" onClick={openTimePicker}>
                     <span>{draft.dueTime ? `${selectedTime.hour}:${selectedTime.minute} ${selectedTime.period}` : 'Sin hora'}</span>
@@ -722,7 +722,7 @@ export function TaskModal({
                     </div>
                   ) : null}
                 </div>
-              </label>
+              </div>
             </div>
             <div className="form-grid">
               <label>

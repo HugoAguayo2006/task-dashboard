@@ -1891,7 +1891,8 @@
   gap: 13px;
 }
 
-.task-form label {
+.task-form label,
+.task-form-field {
   display: grid;
   gap: 6px;
   color: var(--text-soft);
