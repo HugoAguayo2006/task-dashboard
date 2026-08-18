@@ -13,7 +13,13 @@ type Task = {
   updatedAt?: string
 }
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
-type Reminder = { id: string; task: Task; scheduledAt: Date; label: string }
+type Reminder = {
+  id: string
+  kind: 'high-day' | 'one-day' | 'one-hour' | 'due-now'
+  task: Task
+  scheduledAt: Date
+  label: string
+}
 
 // GitHub Actions puede retrasar u omitir ejecuciones programadas. Como cada aviso se
 // reclama de forma unica en Supabase, podemos recuperar un dia completo sin duplicarlo.
@@ -46,7 +52,7 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
   const reminders: Reminder[] = []
   if (task.priority === 'high') {
     const scheduledAt = zonedDate(task.dueDate, '08:00', timezone)
-    reminders.push({ id: `${task.id}:high-day:${scheduledAt.toISOString()}`, task, scheduledAt, label: 'Prioridad alta para hoy' })
+    reminders.push({ id: `${task.id}:high-day:${scheduledAt.toISOString()}`, kind: 'high-day', task, scheduledAt, label: 'Prioridad alta para hoy' })
   }
   if (task.dueTime) {
     const dueAt = zonedDate(task.dueDate, task.dueTime, timezone)
@@ -56,14 +62,18 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
       ['due-now', 0, 'Tarea para ahora'],
     ] as const) {
       const scheduledAt = new Date(dueAt.getTime() - milliseconds)
-      reminders.push({ id: `${task.id}:${kind}:${scheduledAt.toISOString()}`, task, scheduledAt, label })
+      reminders.push({ id: `${task.id}:${kind}:${scheduledAt.toISOString()}`, kind, task, scheduledAt, label })
     }
   }
   // No recuperamos avisos cuya hora ya habia pasado cuando la tarea se creo o edito.
   // El margen permite crear una tarea exactamente a una hora de su vencimiento.
   const changedAt = Date.parse(task.updatedAt || task.createdAt || '')
   if (!Number.isFinite(changedAt)) return reminders
-  return reminders.filter((reminder) => reminder.scheduledAt.getTime() >= changedAt - 60_000)
+  return reminders.filter((reminder) =>
+    // La pagina muestra el aviso de una hora aunque la tarea se haya creado o
+    // editado dentro de esa ultima hora. El push debe seguir la misma regla.
+    reminder.kind === 'one-hour' || reminder.scheduledAt.getTime() >= changedAt - 60_000,
+  )
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
