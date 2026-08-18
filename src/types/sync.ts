@@ -3,6 +3,10 @@ import type { Task } from './task'
 
 export type SyncState = {
   deletedSeedTaskIds?: string[]
+  externalCalendarState?: {
+    hiddenIds: string[]
+    reviewedIds: string[]
+  }
   lists: TaskList[]
   tasks: Task[]
   updatedAt: string

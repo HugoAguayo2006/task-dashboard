@@ -84,6 +84,7 @@ function App() {
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
   const lastSavedCloudState = useRef('')
+  const loadCloudStateRef = useRef<() => Promise<void>>(async () => undefined)
   const skipNextAutosync = useRef(false)
   const workspaceRef = useRef<HTMLElement | null>(null)
   const settingsRef = useRef<HTMLDivElement | null>(null)
@@ -107,19 +108,24 @@ function App() {
 
       syncDisabled.current = false
       if (result.state) {
+        const externalCalendarLocalState = result.state.externalCalendarState ?? externalCalendarState.localState
         const state = {
           ...result.state,
           deletedSeedTaskIds: result.state.deletedSeedTaskIds ?? [],
+          externalCalendarState: externalCalendarLocalState,
           lists: mergeInitialLists(result.state.lists),
           tasks: mergeInitialTasks(result.state.tasks, result.state.deletedSeedTaskIds ?? []),
           updatedAt: new Date().toISOString(),
         }
         listsState.replaceLists(state.lists)
         tasksState.replaceTasks(state.tasks, state.deletedSeedTaskIds)
-        lastSavedCloudState.current = JSON.stringify(result.state)
+        externalCalendarState.replaceLocalState(externalCalendarLocalState)
+        if (!result.state.externalCalendarState) await saveSyncState(state)
+        lastSavedCloudState.current = JSON.stringify(state)
       } else {
         const state = {
           deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
+          externalCalendarState: externalCalendarState.localState,
           lists: mergeInitialLists(listsState.lists),
           tasks: mergeInitialTasks(tasksState.tasks, tasksState.deletedSeedTaskIds),
           updatedAt: new Date().toISOString(),
@@ -134,12 +140,21 @@ function App() {
       syncReady.current = true
     }
   }
+  loadCloudStateRef.current = loadCloudState
 
   useEffect(() => {
     if (didLoadCloudState.current) return
     didLoadCloudState.current = true
     loadCloudState()
   })
+
+  useEffect(() => {
+    const refreshCloudStateWhenVisible = () => {
+      if (document.visibilityState === 'visible' && syncReady.current) loadCloudStateRef.current()
+    }
+    document.addEventListener('visibilitychange', refreshCloudStateWhenVisible)
+    return () => document.removeEventListener('visibilitychange', refreshCloudStateWhenVisible)
+  }, [])
 
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
@@ -206,6 +221,7 @@ function App() {
 
     const state = {
       deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
+      externalCalendarState: externalCalendarState.localState,
       lists: listsState.lists,
       tasks: tasksState.tasks,
       updatedAt: new Date().toISOString(),
@@ -229,7 +245,7 @@ function App() {
     }, 900)
 
     return () => window.clearTimeout(timeout)
-  }, [listsState.lists, tasksState.deletedSeedTaskIds, tasksState.tasks])
+  }, [externalCalendarState.localState, listsState.lists, tasksState.deletedSeedTaskIds, tasksState.tasks])
 
   const allTasks = useMemo(
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],

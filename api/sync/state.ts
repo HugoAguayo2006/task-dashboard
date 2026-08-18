@@ -13,6 +13,10 @@ type VercelResponse = {
 
 type SyncState = {
   deletedSeedTaskIds?: string[]
+  externalCalendarState?: {
+    hiddenIds: string[]
+    reviewedIds: string[]
+  }
   lists: unknown[]
   tasks: unknown[]
   updatedAt: string
@@ -25,11 +29,19 @@ function isSyncState(value: unknown): value is SyncState {
     state.deletedSeedTaskIds === undefined ||
     (Array.isArray(state.deletedSeedTaskIds) &&
       state.deletedSeedTaskIds.every((taskId) => typeof taskId === 'string'))
+  const hasExternalCalendarState =
+    state.externalCalendarState === undefined ||
+    (Boolean(state.externalCalendarState) &&
+      Array.isArray(state.externalCalendarState.hiddenIds) &&
+      state.externalCalendarState.hiddenIds.every((eventId) => typeof eventId === 'string') &&
+      Array.isArray(state.externalCalendarState.reviewedIds) &&
+      state.externalCalendarState.reviewedIds.every((eventId) => typeof eventId === 'string'))
   return (
     Array.isArray(state.lists) &&
     Array.isArray(state.tasks) &&
     typeof state.updatedAt === 'string' &&
-    hasDeletedSeedTaskIds
+    hasDeletedSeedTaskIds &&
+    hasExternalCalendarState
   )
 }
 

@@ -6,7 +6,7 @@ import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
 import { addDaysISO } from '../utils/dates'
 
-type ExternalCalendarLocalState = {
+export type ExternalCalendarLocalState = {
   hiddenIds: string[]
   reviewedIds: string[]
 }
@@ -160,5 +160,12 @@ export function useExternalCalendarTasks(lists: TaskList[]) {
     setTasks((current) => current.filter((task) => task.id !== id))
   }
 
-  return { hideTask, refresh, status, tasks, toggleReviewed }
+  const replaceLocalState = (nextState: ExternalCalendarLocalState) => {
+    setLocalState({
+      hiddenIds: Array.from(new Set(nextState.hiddenIds)),
+      reviewedIds: Array.from(new Set(nextState.reviewedIds)),
+    })
+  }
+
+  return { hideTask, localState, refresh, replaceLocalState, status, tasks, toggleReviewed }
 }
