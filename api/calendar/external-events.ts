@@ -52,6 +52,14 @@ type RawIcsEvent = {
   rrule?: string
 }
 
+const builtInCalendarFeeds: CalendarFeed[] = [
+  {
+    name: 'Integración de seguridad informática en redes y sistemas de software',
+    url: 'https://calendar.google.com/calendar/ical/c_259d6c92ee52e4aa65b3a912355d7f8bd1df217628ba146265c4e86b4bdd8401%40group.calendar.google.com/public/basic.ics',
+    color: '#8b5cf6',
+  },
+]
+
 type ZoomMeeting = {
   id: number
   uuid?: string
@@ -425,10 +433,10 @@ function expandEvent(rawEvent: RawIcsEvent, feed: CalendarFeed, rangeStart: Date
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
-  let feeds: CalendarFeed[] = []
+  let feeds: CalendarFeed[] = [...builtInCalendarFeeds]
   try {
     const configuredFeeds = process.env.CHALENDAR_EXTERNAL_CALENDAR_FEEDS?.trim()
-    feeds = parseFeeds(configuredFeeds || readLocalEnv('CHALENDAR_EXTERNAL_CALENDAR_FEEDS'))
+    feeds.push(...parseFeeds(configuredFeeds || readLocalEnv('CHALENDAR_EXTERNAL_CALENDAR_FEEDS')))
   } catch {
     response.status(400).json({
       code: 'invalid-feeds',
