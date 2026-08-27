@@ -1909,6 +1909,20 @@
   gap: 12px;
 }
 
+.form-grid > label,
+.form-grid > .task-form-field {
+  min-width: 0;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.form-grid .date-field,
+.form-grid .time-field {
+  width: 100%;
+  min-width: 0;
+}
+
 .date-field,
 .time-field {
   display: grid;
