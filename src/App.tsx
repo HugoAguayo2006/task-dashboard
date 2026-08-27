@@ -280,11 +280,18 @@ function App() {
         if (task.completed || !task.dueDate) return []
         const reminders: Array<{ id: string; title: string; scheduledAt: number }> = []
         if (task.priority === 'high') {
-          reminders.push({
-            id: `${task.id}:high-day:${task.dueDate}`,
-            title: 'Prioridad alta para hoy',
-            scheduledAt: new Date(`${task.dueDate}T08:00:00`).getTime(),
-          })
+          reminders.push(
+            {
+              id: `${task.id}:high-morning:${task.dueDate}`,
+              title: 'Prioridad alta para hoy',
+              scheduledAt: new Date(`${task.dueDate}T08:00:00`).getTime(),
+            },
+            {
+              id: `${task.id}:high-evening:${task.dueDate}`,
+              title: 'Recordatorio de prioridad alta',
+              scheduledAt: new Date(`${task.dueDate}T17:00:00`).getTime(),
+            },
+          )
         }
         if (task.dueTime) {
           const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()

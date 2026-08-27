@@ -15,7 +15,7 @@ type Task = {
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
 type Reminder = {
   id: string
-  kind: 'high-day' | 'one-day' | 'one-hour' | 'due-now'
+  kind: 'high-morning' | 'high-evening' | 'one-day' | 'one-hour' | 'due-now'
   task: Task
   scheduledAt: Date
   label: string
@@ -51,8 +51,12 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
   if (!task.dueDate || task.completed) return []
   const reminders: Reminder[] = []
   if (task.priority === 'high') {
-    const scheduledAt = zonedDate(task.dueDate, '08:00', timezone)
-    reminders.push({ id: `${task.id}:high-day:${scheduledAt.toISOString()}`, kind: 'high-day', task, scheduledAt, label: 'Prioridad alta para hoy' })
+    const morningAt = zonedDate(task.dueDate, '08:00', timezone)
+    const eveningAt = zonedDate(task.dueDate, '17:00', timezone)
+    reminders.push(
+      { id: `${task.id}:high-morning:${morningAt.toISOString()}`, kind: 'high-morning', task, scheduledAt: morningAt, label: 'Prioridad alta para hoy' },
+      { id: `${task.id}:high-evening:${eveningAt.toISOString()}`, kind: 'high-evening', task, scheduledAt: eveningAt, label: 'Recordatorio de prioridad alta' },
+    )
   }
   if (task.dueTime) {
     const dueAt = zonedDate(task.dueDate, task.dueTime, timezone)
