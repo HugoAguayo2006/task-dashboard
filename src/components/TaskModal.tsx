@@ -165,6 +165,7 @@ export function TaskModal({
   const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
   const [prioritySaveStatus, setPrioritySaveStatus] = useState<DateSaveStatus>('idle')
   const [listSaveStatus, setListSaveStatus] = useState<DateSaveStatus>('idle')
+  const initializedFormContext = useRef<string | null>(null)
   const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving' || listSaveStatus === 'saving'
 
   useEffect(() => {
@@ -172,6 +173,16 @@ export function TaskModal({
       lists.find((list) => list.name.trim().toLocaleLowerCase('es') === 'proyectos personales')?.id ??
       lists[0]?.id ??
       ''
+    const formContext = task ? `task:${task.id}` : `new:${defaultDueDate ?? ''}`
+
+    if (initializedFormContext.current === formContext) {
+      if (defaultListId) {
+        setDraft((current) => current.listId ? current : { ...current, listId: defaultListId })
+      }
+      return
+    }
+
+    initializedFormContext.current = formContext
     setDraft(
       task
         ? {
