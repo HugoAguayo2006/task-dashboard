@@ -1,7 +1,7 @@
 name: Enviar recordatorios
 
 on:
-  # Supabase Cron ejecuta el monitor cada minuto. Conservamos esta accion solamente
+  # Supabase Cron ejecuta el monitor cada cinco minutos. Conservamos esta accion solamente
   # para diagnosticos manuales desde GitHub.
   workflow_dispatch:
 

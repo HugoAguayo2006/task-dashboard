@@ -125,8 +125,39 @@ npx web-push generate-vapid-keys
 ```
 
 Configura `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y `CRON_SECRET` en Vercel.
-El workflow `.github/workflows/send-reminders.yml` ejecuta el evaluador cada cinco minutos en
+Supabase Cron ejecuta el evaluador cada cinco minutos. El workflow
+`.github/workflows/send-reminders.yml` se conserva solamente para diagnósticos manuales desde
 GitHub Actions. Guarda el mismo `CRON_SECRET` como secreto del repositorio en GitHub.
+
+Si el monitor ya estaba programado cada minuto, cambia solamente ese job desde el SQL Editor de
+Supabase:
+
+```sql
+do $$
+declare
+  reminder_job record;
+begin
+  for reminder_job in
+    select jobid
+    from cron.job
+    where command like '%send-reminders%'
+  loop
+    perform cron.alter_job(
+      job_id := reminder_job.jobid,
+      schedule := '*/5 * * * *'
+    );
+  end loop;
+end
+$$;
+```
+
+Comprueba el resultado con:
+
+```sql
+select jobid, jobname, schedule, active
+from cron.job
+where command like '%send-reminders%';
+```
 
 En iPhone abre el sitio en Safari, elige **Compartir → Añadir a pantalla de inicio**, abre
 Chalendar desde el nuevo icono y toca **Activar notificaciones**.
