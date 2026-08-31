@@ -868,6 +868,11 @@
   background: var(--card-bg);
 }
 
+.task-card.overdue:not(.completed) {
+  border-color: var(--overdue-border);
+  background: var(--overdue-bg);
+}
+
 .task-card.completed {
   opacity: 0.72;
   background: var(--card-completed-bg);
@@ -1712,16 +1717,6 @@
 
 .today-task-list .task-card {
   margin-bottom: 0;
-}
-
-.today-group-warning .task-card {
-  border-color: rgba(127, 29, 29, 0.2);
-  background: rgba(127, 29, 29, 0.28);
-}
-
-.theme-light .today-group-warning .task-card {
-  border-color: rgba(217, 119, 6, 0.18);
-  background: rgba(255, 247, 237, 0.78);
 }
 
 .today-empty {

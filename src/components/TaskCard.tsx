@@ -31,7 +31,7 @@ export function TaskCard({
 
   return (
     <article
-      className={`task-card ${task.completed ? 'completed' : ''} ${compact ? 'compact' : ''}`}
+      className={`task-card ${task.completed ? 'completed' : ''} ${overdue ? 'overdue' : ''} ${compact ? 'compact' : ''}`}
       style={taskAccentStyle}
     >
       <button
