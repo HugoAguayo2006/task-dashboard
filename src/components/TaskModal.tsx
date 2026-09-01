@@ -363,7 +363,7 @@ export function TaskModal({
                   : listName}
             </span>
             <h2>{task.title}</h2>
-            <p>{task.description || 'Sin descripción adicional.'}</p>
+            <p className="task-description">{task.description || 'Sin descripción adicional.'}</p>
             <dl>
               <div>
                 <dt>Fecha</dt>

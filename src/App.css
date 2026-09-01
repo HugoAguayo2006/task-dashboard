@@ -1886,6 +1886,11 @@
   gap: 13px;
 }
 
+.task-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .task-form label,
 .task-form-field {
   display: grid;
