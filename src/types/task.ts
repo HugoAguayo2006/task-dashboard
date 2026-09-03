@@ -34,6 +34,7 @@ export type Task = {
   recurrenceForever?: boolean
   recurrenceInterval?: number
   recurrenceUnit?: RepeatUnit
+  recurrenceBaseTitle?: string
   reviewed?: boolean
   contextName?: string
   createdAt: string

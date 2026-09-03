@@ -397,7 +397,7 @@ function App() {
     if (task.source !== 'manual' || task.dueDate === dueDate) return
 
     tasksState.updateTask(task.id, {
-      title: task.title,
+      title: task.recurrenceBaseTitle ?? task.title,
       description: task.description ?? '',
       dueDate,
       dueTime: task.dueTime ?? '',

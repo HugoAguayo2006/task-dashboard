@@ -186,7 +186,7 @@ export function TaskModal({
     setDraft(
       task
         ? {
-            title: task.title,
+            title: task.recurrenceBaseTitle ?? task.title,
             description: task.description ?? '',
             dueDate: task.dueDate,
             dueTime: task.dueTime ?? '',

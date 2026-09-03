@@ -2,11 +2,35 @@ import { useEffect, useMemo, useState } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft } from '../types/task'
 import { makeInitialTasks } from '../data/initialWorkspace'
-import { addToISODate } from '../utils/dates'
+import { addToISODate, monthlyRecurringTaskTitle } from '../utils/dates'
 import { isSeedTaskId, mergeInitialTasks } from '../utils/mergeTasks'
 import { readStorage, writeStorage } from '../services/storageService'
 
 const FOREVER_RECURRENCE_WINDOW = 180
+
+function normalizeMonthlyRecurrenceTitles(tasks: Task[]) {
+  const baseTitles = new Map<string, string>()
+
+  for (const task of tasks) {
+    if (task.source !== 'manual' || !task.recurrenceId || task.recurrenceUnit !== 'month') continue
+    baseTitles.set(task.recurrenceId, task.recurrenceBaseTitle?.trim() || task.title.trim())
+  }
+
+  return tasks.map((task) => {
+    if (task.source !== 'manual' || !task.recurrenceId || task.recurrenceUnit !== 'month') return task
+    const baseTitle = baseTitles.get(task.recurrenceId)
+    if (!baseTitle) return task
+    const title = monthlyRecurringTaskTitle(
+      baseTitle,
+      task.dueDate,
+      task.recurrenceIndex,
+      task.recurrenceTotal,
+      task.recurrenceForever,
+    )
+    if (task.title === title && task.recurrenceBaseTitle === baseTitle) return task
+    return { ...task, title, recurrenceBaseTitle: baseTitle }
+  })
+}
 
 function dayDiff(startDate: string, endDate: string) {
   const start = new Date(`${startDate}T12:00:00`)
@@ -65,9 +89,19 @@ function createRecurringTaskFromTemplate(
   recurrenceIndex: number,
   timestamp: string,
 ): Task {
+  const title = template.recurrenceUnit === 'month' && template.recurrenceBaseTitle
+    ? monthlyRecurringTaskTitle(
+        template.recurrenceBaseTitle,
+        dueDate,
+        recurrenceIndex,
+        template.recurrenceTotal,
+        template.recurrenceForever,
+      )
+    : template.title
   return {
     ...template,
     id: crypto.randomUUID(),
+    title,
     dueDate,
     completed: false,
     recurrenceIndex,
@@ -166,9 +200,9 @@ export function useTasks(lists: TaskList[]) {
     readStorage('deleted-seed-task-ids', []),
   )
   const [tasks, setTasks] = useState<Task[]>(() =>
-    normalizeForeverRecurrences(
+    normalizeForeverRecurrences(normalizeMonthlyRecurrenceTitles(
       mergeInitialTasks(readStorage('tasks', makeInitialTasks()), readStorage('deleted-seed-task-ids', [])),
-    ),
+    )),
   )
 
   const listColors = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
@@ -212,7 +246,9 @@ export function useTasks(lists: TaskList[]) {
 
       return {
         id: crypto.randomUUID(),
-        title: draft.title.trim(),
+        title: draft.repeat.enabled && draft.repeat.unit === 'month'
+          ? monthlyRecurringTaskTitle(draft.title, dueDate, index + 1, total, draft.repeat.forever)
+          : draft.title.trim(),
         description: draft.description.trim(),
         dueDate,
         dueTime: draft.dueTime,
@@ -228,6 +264,7 @@ export function useTasks(lists: TaskList[]) {
         recurrenceForever: recurrenceId ? draft.repeat.forever : undefined,
         recurrenceInterval: recurrenceId ? draft.repeat.interval : undefined,
         recurrenceUnit: recurrenceId ? draft.repeat.unit : undefined,
+        recurrenceBaseTitle: recurrenceId && draft.repeat.unit === 'month' ? draft.title.trim() : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       }
@@ -245,6 +282,7 @@ export function useTasks(lists: TaskList[]) {
 
       return current.map((task) => {
         if (task.id === id) {
+          const isMonthlyRecurrence = task.recurrenceUnit === 'month'
           return {
             ...task,
             color: listColors.get(draft.listId) ?? task.color,
@@ -254,16 +292,35 @@ export function useTasks(lists: TaskList[]) {
             listId: draft.listId,
             priority: draft.priority,
             tags: draft.tags,
-            title,
+            title: isMonthlyRecurrence
+              ? monthlyRecurringTaskTitle(
+                  title,
+                  draft.dueDate,
+                  task.recurrenceIndex,
+                  task.recurrenceTotal,
+                  task.recurrenceForever,
+                )
+              : title,
+            recurrenceBaseTitle: isMonthlyRecurrence ? title : task.recurrenceBaseTitle,
             updatedAt: timestamp,
           }
         }
 
         if (taskToUpdate?.recurrenceId && task.recurrenceId === taskToUpdate.recurrenceId) {
+          const isMonthlyRecurrence = task.recurrenceUnit === 'month'
           return {
             ...task,
             description,
-            title,
+            title: isMonthlyRecurrence
+              ? monthlyRecurringTaskTitle(
+                  title,
+                  task.dueDate,
+                  task.recurrenceIndex,
+                  task.recurrenceTotal,
+                  task.recurrenceForever,
+                )
+              : title,
+            recurrenceBaseTitle: isMonthlyRecurrence ? title : task.recurrenceBaseTitle,
             updatedAt: timestamp,
           }
         }
@@ -297,7 +354,9 @@ export function useTasks(lists: TaskList[]) {
   }
 
   const replaceTasks = (nextTasks: Task[], nextDeletedSeedTaskIds = deletedSeedTaskIds) => {
-    setTasks(normalizeForeverRecurrences(mergeInitialTasks(nextTasks, nextDeletedSeedTaskIds)))
+    setTasks(normalizeForeverRecurrences(normalizeMonthlyRecurrenceTitles(
+      mergeInitialTasks(nextTasks, nextDeletedSeedTaskIds),
+    )))
     setDeletedSeedTaskIds(nextDeletedSeedTaskIds)
   }
 

@@ -145,3 +145,28 @@ export function monthTitle(date: Date) {
   }).format(date)
   return title.charAt(0).toUpperCase() + title.slice(1)
 }
+
+export function taskMonthTitle(date: string) {
+  if (!date) return ''
+  const title = new Intl.DateTimeFormat('es-MX', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${date}T12:00:00`))
+  return title.charAt(0).toUpperCase() + title.slice(1)
+}
+
+export function monthlyRecurringTaskTitle(
+  baseTitle: string,
+  dueDate: string,
+  recurrenceIndex?: number,
+  recurrenceTotal?: number,
+  recurrenceForever?: boolean,
+) {
+  const month = taskMonthTitle(dueDate)
+  const progress = recurrenceIndex
+    ? recurrenceForever
+      ? `${recurrenceIndex} repeticiones`
+      : `${recurrenceIndex}/${recurrenceTotal ?? '?'}`
+    : ''
+  return [baseTitle.trim(), month, progress].filter(Boolean).join(' · ')
+}
