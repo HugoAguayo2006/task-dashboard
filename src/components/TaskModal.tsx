@@ -621,7 +621,7 @@ export function TaskModal({
                 <dd>{task.completed ? 'Completada' : 'Pendiente'}</dd>
               </div>
               {task.recurrenceId ? (
-                <div>
+                <div className="details-summary-row">
                   <dt>Repetición</dt>
                   <dd>
                     {task.recurrenceForever
