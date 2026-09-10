@@ -55,8 +55,10 @@ function readSavedTheme(): ThemeMode {
 }
 
 function readInitialView(): AppView {
-  if (typeof window === 'undefined') return 'lists'
-  return new URLSearchParams(window.location.search).get('view') === 'today' ? 'today' : 'lists'
+  if (typeof window === 'undefined') return 'today'
+  const requestedView = new URLSearchParams(window.location.search).get('view')
+  const availableViews: AppView[] = ['today', 'tomorrow', 'calendar', 'lists', 'canvas']
+  return availableViews.includes(requestedView as AppView) ? requestedView as AppView : 'today'
 }
 
 function mergeInitialLists(lists: typeof initialLists) {
