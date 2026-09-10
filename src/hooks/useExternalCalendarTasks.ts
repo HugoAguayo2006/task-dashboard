@@ -1,19 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchExternalCalendarEvents } from '../services/externalCalendarApi'
 import { readStorage, writeStorage } from '../services/storageService'
-import type { ExternalCalendarStatus } from '../types/externalCalendar'
+import type { ExternalCalendarEvent, ExternalCalendarStatus } from '../types/externalCalendar'
 import type { TaskList } from '../types/list'
+import type { ExternalCalendarSyncState } from '../types/sync'
 import type { Task } from '../types/task'
 import { addDaysISO } from '../utils/dates'
+import {
+  normalizeExternalCalendarState,
+  resolveExternalCalendarFlag,
+} from '../utils/syncState'
 
-export type ExternalCalendarLocalState = {
-  hiddenIds: string[]
-  reviewedIds: string[]
-}
+export type ExternalCalendarLocalState = ExternalCalendarSyncState
 
 const initialLocalState: ExternalCalendarLocalState = {
+  entries: {},
   hiddenIds: [],
   reviewedIds: [],
+  updatedAt: '1970-01-01T00:00:00.000Z',
 }
 
 const refreshIntervalMs = 5 * 60 * 1000
@@ -54,71 +58,60 @@ function getCalendarList(calendarName: string) {
   return fallbackCalendarList
 }
 
+function normalizedTitle(title: string) {
+  return title.trim().toLocaleLowerCase('es').replace(/\s+/g, ' ')
+}
+
+function eventIdentityKey(
+  event: Pick<ExternalCalendarEvent, 'calendarName' | 'start' | 'title'>,
+  listId: string,
+) {
+  return `external-event:${listId}:${event.start}:${normalizedTitle(event.title || 'Reunión')}`
+}
+
+function taskIdentityKeys(task: Task) {
+  const start = `${task.dueDate}${task.dueTime ? `T${task.dueTime}` : ''}`
+  return [
+    task.id,
+    `external-event:${task.listId}:${start}:${normalizedTitle(task.title)}`,
+  ]
+}
+
 export function useExternalCalendarTasks(lists: TaskList[]) {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [events, setEvents] = useState<ExternalCalendarEvent[]>([])
   const [status, setStatus] = useState<ExternalCalendarStatus>('idle')
-  const [localState, setLocalState] = useState<ExternalCalendarLocalState>(() =>
-    readStorage('external-calendar-state', initialLocalState),
+  const refreshRequestId = useRef(0)
+  const [localState, setLocalState] = useState<ExternalCalendarLocalState>(() => {
+    const stored = readStorage<ExternalCalendarLocalState>('external-calendar-state', initialLocalState)
+    return normalizeExternalCalendarState(stored, new Date().toISOString())
+  })
+
+  const listColorById = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
+  const normalizedLocalState = useMemo(
+    () => normalizeExternalCalendarState(localState),
+    [localState],
   )
 
-  const hiddenSet = useMemo(() => new Set(localState.hiddenIds), [localState.hiddenIds])
-  const listColorById = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
-  const reviewedSet = useMemo(() => new Set(localState.reviewedIds), [localState.reviewedIds])
-
   useEffect(() => {
-    writeStorage('external-calendar-state', localState)
-  }, [localState])
+    writeStorage('external-calendar-state', normalizedLocalState)
+  }, [normalizedLocalState])
 
   const refresh = useCallback(async () => {
+    const requestId = ++refreshRequestId.current
     setStatus('loading')
     try {
-      // Keep recent events available while the user navigates previous days/months.
       const startDate = addDaysISO(-120)
       const endDate = addDaysISO(120)
-      const events = await fetchExternalCalendarEvents(startDate, endDate)
-      const mapped = events
-        .map((event): Task => {
-          const id = `external-calendar-${event.id}`
-          const start = event.start
-          const dueDate = start.slice(0, 10)
-          const dueTime = event.allDay || !start.includes('T') ? '' : start.slice(11, 16)
-          const calendarList = getCalendarList(event.calendarName)
-          return {
-            id,
-            title: event.title || 'Reunión',
-            description: buildDescription(event.description, event.location),
-            dueDate,
-            dueTime,
-            listId: calendarList.id,
-            color: listColorById.get(calendarList.id) ?? event.color ?? calendarList.color,
-            completed: reviewedSet.has(id),
-            priority: 'medium',
-            tags: [event.calendarName],
-            source: 'external-calendar',
-            canvasUrl: event.url,
-            externalCalendarId: event.id,
-            externalCalendarName: event.calendarName,
-            recurrenceForever: event.recurrenceForever,
-            recurrenceId: event.recurrenceId,
-            recurrenceIndex: event.recurrenceIndex,
-            recurrenceInterval: event.recurrenceInterval,
-            recurrenceTotal: event.recurrenceTotal,
-            recurrenceUnit: event.recurrenceUnit,
-            reviewed: reviewedSet.has(id),
-            contextName: event.calendarName,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        })
-        .filter((task) => !hiddenSet.has(task.id))
-
-      setTasks(mapped)
-      setStatus(mapped.length ? 'ready' : 'empty')
+      const nextEvents = await fetchExternalCalendarEvents(startDate, endDate)
+      if (requestId !== refreshRequestId.current) return
+      setEvents(nextEvents)
+      setStatus(nextEvents.length ? 'ready' : 'empty')
     } catch (error) {
-      setTasks([])
+      if (requestId !== refreshRequestId.current) return
+      setEvents([])
       setStatus(error instanceof Error && error.name === 'missing-feeds' ? 'missing-feeds' : 'error')
     }
-  }, [hiddenSet, listColorById, reviewedSet])
+  }, [])
 
   useEffect(() => {
     refresh()
@@ -138,38 +131,84 @@ export function useExternalCalendarTasks(lists: TaskList[]) {
     }
   }, [refresh])
 
-  const toggleReviewed = (id: string) => {
+  const tasks = useMemo(() => events.flatMap((event): Task[] => {
+    const id = `external-calendar-${event.id}`
+    const start = event.start
+    const dueDate = start.slice(0, 10)
+    const dueTime = event.allDay || !start.includes('T') ? '' : start.slice(11, 16)
+    const calendarList = getCalendarList(event.calendarName)
+    const identityKeys = [id, eventIdentityKey(event, calendarList.id)]
+    if (resolveExternalCalendarFlag(normalizedLocalState, identityKeys, 'hidden')) return []
+    const reviewed = resolveExternalCalendarFlag(normalizedLocalState, identityKeys, 'reviewed')
+
+    return [{
+      id,
+      title: event.title || 'Reunión',
+      description: buildDescription(event.description, event.location),
+      dueDate,
+      dueTime,
+      listId: calendarList.id,
+      color: listColorById.get(calendarList.id) ?? event.color ?? calendarList.color,
+      completed: reviewed,
+      priority: 'medium',
+      tags: [event.calendarName],
+      source: 'external-calendar',
+      canvasUrl: event.url,
+      externalCalendarId: event.id,
+      externalCalendarName: event.calendarName,
+      recurrenceForever: event.recurrenceForever,
+      recurrenceId: event.recurrenceId,
+      recurrenceIndex: event.recurrenceIndex,
+      recurrenceInterval: event.recurrenceInterval,
+      recurrenceTotal: event.recurrenceTotal,
+      recurrenceUnit: event.recurrenceUnit,
+      reviewed,
+      contextName: event.calendarName,
+      createdAt: start,
+      updatedAt: start,
+    }]
+  }), [events, listColorById, normalizedLocalState])
+
+  const setFlag = (task: Task, field: 'hidden' | 'reviewed', value: boolean) => {
+    const changedAt = new Date().toISOString()
+    const updatedAtField = `${field}UpdatedAt` as const
     setLocalState((current) => {
-      const isReviewed = current.reviewedIds.includes(id)
-      return {
-        ...current,
-        reviewedIds: isReviewed
-          ? current.reviewedIds.filter((reviewedId) => reviewedId !== id)
-          : Array.from(new Set([...current.reviewedIds, id])),
+      const normalized = normalizeExternalCalendarState(current)
+      const entries = { ...normalized.entries }
+      for (const id of taskIdentityKeys(task)) {
+        entries[id] = {
+          ...entries[id],
+          [field]: value,
+          [updatedAtField]: changedAt,
+        }
       }
+      return normalizeExternalCalendarState({
+        ...normalized,
+        entries,
+        updatedAt: changedAt,
+      })
     })
-    setTasks((current) =>
-      current.map((task) => {
-        if (task.id !== id) return task
-        return { ...task, completed: !task.completed, reviewed: !task.completed }
-      }),
-    )
   }
 
-  const hideTask = (id: string) => {
-    setLocalState((current) => ({
-      ...current,
-      hiddenIds: Array.from(new Set([...current.hiddenIds, id])),
-    }))
-    setTasks((current) => current.filter((task) => task.id !== id))
+  const toggleReviewed = (task: Task) => {
+    setFlag(task, 'reviewed', !task.completed)
+  }
+
+  const hideTask = (task: Task) => {
+    setFlag(task, 'hidden', true)
   }
 
   const replaceLocalState = (nextState: ExternalCalendarLocalState) => {
-    setLocalState({
-      hiddenIds: Array.from(new Set(nextState.hiddenIds)),
-      reviewedIds: Array.from(new Set(nextState.reviewedIds)),
-    })
+    setLocalState(normalizeExternalCalendarState(nextState, nextState.updatedAt))
   }
 
-  return { hideTask, localState, refresh, replaceLocalState, status, tasks, toggleReviewed }
+  return {
+    hideTask,
+    localState: normalizedLocalState,
+    refresh,
+    replaceLocalState,
+    status,
+    tasks,
+    toggleReviewed,
+  }
 }

@@ -16,12 +16,16 @@ import { useCanvasTasks } from './hooks/useCanvasTasks'
 import { useExternalCalendarTasks } from './hooks/useExternalCalendarTasks'
 import { useLists } from './hooks/useLists'
 import { useTasks } from './hooks/useTasks'
-import { initialLists } from './data/initialWorkspace'
-import { fetchSyncState, saveSyncState } from './services/syncApi'
-import type { SyncStatus } from './types/sync'
+import { fetchSyncState, saveSyncState, SyncConflictError } from './services/syncApi'
+import type { SyncState, SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters, TaskPriority } from './types/task'
 import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from './utils/dates'
-import { mergeInitialTasks } from './utils/mergeTasks'
+import {
+  latestWorkspaceTimestamp,
+  mergeSyncStates,
+  nextSyncTimestamp,
+  syncStateFingerprint,
+} from './utils/syncState'
 
 const initialFilters: TaskFilters = {
   query: '',
@@ -61,12 +65,6 @@ function readInitialView(): AppView {
   return availableViews.includes(requestedView as AppView) ? requestedView as AppView : 'today'
 }
 
-function mergeInitialLists(lists: typeof initialLists) {
-  const currentIds = new Set(lists.map((list) => list.id))
-  const missingLists = initialLists.filter((list) => !currentIds.has(list.id))
-  return missingLists.length ? [...lists, ...missingLists] : lists
-}
-
 function App() {
   const [view, setView] = useState<AppView>(readInitialView)
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
@@ -88,7 +86,12 @@ function App() {
   const didLoadCloudState = useRef(false)
   const lastSavedCloudState = useRef('')
   const loadCloudStateRef = useRef<() => Promise<void>>(async () => undefined)
-  const skipNextAutosync = useRef(false)
+  const synchronizeStateRef = useRef<(state: SyncState) => Promise<'local' | 'synced'>>(
+    async () => 'local',
+  )
+  const latestSyncStateRef = useRef<SyncState | null>(null)
+  const syncQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const autosyncTimerRef = useRef<number | null>(null)
   const workspaceRef = useRef<HTMLElement | null>(null)
   const settingsRef = useRef<HTMLDivElement | null>(null)
   const settingsPanelRef = useRef<HTMLDivElement | null>(null)
@@ -99,49 +102,125 @@ function App() {
   const canvasState = useCanvasTasks()
   const externalCalendarState = useExternalCalendarTasks(listsState.lists)
 
+  const currentSyncContent = {
+    deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
+    externalCalendarState: externalCalendarState.localState,
+    listTombstones: listsState.listTombstones,
+    lists: listsState.lists,
+    taskTombstones: tasksState.taskTombstones,
+    tasks: tasksState.tasks,
+  }
+  const currentSyncState: SyncState = {
+    ...currentSyncContent,
+    updatedAt: latestWorkspaceTimestamp(currentSyncContent),
+  }
+  latestSyncStateRef.current = currentSyncState
+
+  const applySyncState = (state: SyncState) => {
+    listsState.replaceLists(state.lists, state.listTombstones ?? {})
+    tasksState.replaceTasks(
+      state.tasks,
+      state.deletedSeedTaskIds ?? [],
+      state.taskTombstones ?? {},
+    )
+    externalCalendarState.replaceLocalState(
+      state.externalCalendarState ?? externalCalendarState.localState,
+    )
+  }
+
+  const enqueueSync = <T,>(operation: () => Promise<T>) => {
+    const result = syncQueueRef.current.catch(() => undefined).then(operation)
+    syncQueueRef.current = result.then(() => undefined, () => undefined)
+    return result
+  }
+
+  const synchronizeState = (desiredState: SyncState) => enqueueSync(async () => {
+    if (syncDisabled.current) {
+      setSyncStatus('local')
+      return 'local' as const
+    }
+
+    setSyncStatus('saving')
+    let candidate = desiredState
+    try {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = await fetchSyncState()
+        if (result.disabled) {
+          syncDisabled.current = true
+          setSyncStatus('local')
+          return 'local' as const
+        }
+
+        syncDisabled.current = false
+        const remoteState = result.state
+        let merged = remoteState ? mergeSyncStates(candidate, remoteState) : candidate
+        const latestLocalState = latestSyncStateRef.current
+        if (latestLocalState) merged = mergeSyncStates(latestLocalState, merged)
+
+        if (remoteState && syncStateFingerprint(merged) === syncStateFingerprint(remoteState)) {
+          lastSavedCloudState.current = syncStateFingerprint(remoteState)
+          applySyncState(merged)
+          setSyncStatus('synced')
+          return 'synced' as const
+        }
+
+        const stateToSave = {
+          ...merged,
+          updatedAt: nextSyncTimestamp(remoteState?.updatedAt, merged.updatedAt),
+        }
+
+        try {
+          const saveResult = await saveSyncState(stateToSave, remoteState?.updatedAt)
+          if (saveResult.disabled) {
+            syncDisabled.current = true
+            setSyncStatus('local')
+            return 'local' as const
+          }
+
+          lastSavedCloudState.current = syncStateFingerprint(stateToSave)
+          const newestLocalState = latestSyncStateRef.current
+          const safeState = newestLocalState
+            ? mergeSyncStates(newestLocalState, stateToSave)
+            : stateToSave
+          applySyncState(safeState)
+
+          if (syncStateFingerprint(safeState) === syncStateFingerprint(stateToSave)) {
+            setSyncStatus('synced')
+            return 'synced' as const
+          }
+          candidate = safeState
+        } catch (error) {
+          if (error instanceof SyncConflictError) {
+            candidate = merged
+            continue
+          }
+          throw error
+        }
+      }
+      throw new Error('La sincronización cambió demasiadas veces seguidas.')
+    } catch (error) {
+      setSyncStatus('error')
+      throw error
+    }
+  })
+  synchronizeStateRef.current = synchronizeState
+
   const loadCloudState = async () => {
+    if (autosyncTimerRef.current !== null) {
+      window.clearTimeout(autosyncTimerRef.current)
+      autosyncTimerRef.current = null
+    }
     setSyncStatus('loading')
     syncReady.current = false
+    // A manual/visibility refresh must be allowed to recover after a temporary
+    // disabled or unavailable backend.
+    syncDisabled.current = false
     try {
-      const result = await fetchSyncState()
-      if (result.disabled) {
-        syncDisabled.current = true
-        setSyncStatus('local')
-        syncReady.current = true
-        return
-      }
-
-      syncDisabled.current = false
-      if (result.state) {
-        const externalCalendarLocalState = result.state.externalCalendarState ?? externalCalendarState.localState
-        const state = {
-          ...result.state,
-          deletedSeedTaskIds: result.state.deletedSeedTaskIds ?? [],
-          externalCalendarState: externalCalendarLocalState,
-          lists: mergeInitialLists(result.state.lists),
-          tasks: mergeInitialTasks(result.state.tasks, result.state.deletedSeedTaskIds ?? []),
-          updatedAt: new Date().toISOString(),
-        }
-        listsState.replaceLists(state.lists)
-        tasksState.replaceTasks(state.tasks, state.deletedSeedTaskIds)
-        externalCalendarState.replaceLocalState(externalCalendarLocalState)
-        if (!result.state.externalCalendarState) await saveSyncState(state)
-        lastSavedCloudState.current = JSON.stringify(state)
-      } else {
-        const state = {
-          deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
-          externalCalendarState: externalCalendarState.localState,
-          lists: mergeInitialLists(listsState.lists),
-          tasks: mergeInitialTasks(tasksState.tasks, tasksState.deletedSeedTaskIds),
-          updatedAt: new Date().toISOString(),
-        }
-        await saveSyncState(state)
-        lastSavedCloudState.current = JSON.stringify(state)
-      }
-      setSyncStatus('synced')
-      syncReady.current = true
+      const latestState = latestSyncStateRef.current
+      if (latestState) await synchronizeState(latestState)
     } catch {
-      setSyncStatus('error')
+      // synchronizeState already exposes the error in the status bar.
+    } finally {
       syncReady.current = true
     }
   }
@@ -237,38 +316,33 @@ function App() {
 
   useEffect(() => {
     if (!syncReady.current || syncDisabled.current) return
-    if (skipNextAutosync.current) {
-      skipNextAutosync.current = false
-      return
-    }
-
-    const state = {
-      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
-      externalCalendarState: externalCalendarState.localState,
-      lists: listsState.lists,
-      tasks: tasksState.tasks,
-      updatedAt: new Date().toISOString(),
-    }
-    const serialized = JSON.stringify(state)
+    const state = latestSyncStateRef.current
+    if (!state) return
+    const serialized = syncStateFingerprint(state)
     if (serialized === lastSavedCloudState.current) return
 
     setSyncStatus('saving')
-    const timeout = window.setTimeout(() => {
-      saveSyncState(state)
-        .then((result) => {
-          if (result.disabled) {
-            syncDisabled.current = true
-            setSyncStatus('local')
-            return
-          }
-          lastSavedCloudState.current = serialized
-          setSyncStatus('synced')
-        })
-        .catch(() => setSyncStatus('error'))
-    }, 900)
+    autosyncTimerRef.current = window.setTimeout(() => {
+      autosyncTimerRef.current = null
+      const latestState = latestSyncStateRef.current
+      if (!latestState || syncStateFingerprint(latestState) === lastSavedCloudState.current) return
+      synchronizeStateRef.current(latestState).catch(() => undefined)
+    }, 400)
 
-    return () => window.clearTimeout(timeout)
-  }, [externalCalendarState.localState, listsState.lists, tasksState.deletedSeedTaskIds, tasksState.tasks])
+    return () => {
+      if (autosyncTimerRef.current !== null) {
+        window.clearTimeout(autosyncTimerRef.current)
+        autosyncTimerRef.current = null
+      }
+    }
+  }, [
+    externalCalendarState.localState,
+    listsState.listTombstones,
+    listsState.lists,
+    tasksState.deletedSeedTaskIds,
+    tasksState.taskTombstones,
+    tasksState.tasks,
+  ])
 
   const allTasks = useMemo(
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
@@ -381,16 +455,33 @@ function App() {
     ? null
     : listsState.lists.find((list) => list.id === filters.listId) ?? null
 
+  const syncManualTasks = async (nextTasks: Task[]) => {
+    const content = { ...currentSyncContent, tasks: nextTasks }
+    const state = { ...content, updatedAt: latestWorkspaceTimestamp(content) }
+    tasksState.replaceTasks(
+      nextTasks,
+      tasksState.deletedSeedTaskIds,
+      tasksState.taskTombstones,
+    )
+    return synchronizeState(state)
+  }
+
   const handleComplete = (task: Task) => {
     if (task.source === 'canvas') {
       canvasState.markReviewed(task.id)
       return
     }
     if (task.source === 'external-calendar') {
-      externalCalendarState.toggleReviewed(task.id)
+      externalCalendarState.toggleReviewed(task)
       return
     }
-    tasksState.toggleTask(task.id)
+    const timestamp = new Date().toISOString()
+    const nextTasks = tasksState.tasks.map((currentTask) =>
+      currentTask.id === task.id
+        ? { ...currentTask, completed: !currentTask.completed, updatedAt: timestamp }
+        : currentTask,
+    )
+    void syncManualTasks(nextTasks).catch(() => undefined)
   }
 
   const handleDelete = (task: Task) => {
@@ -402,7 +493,7 @@ function App() {
       return
     }
     if (task.source === 'external-calendar') {
-      externalCalendarState.hideTask(task.id)
+      externalCalendarState.hideTask(task)
       return
     }
     tasksState.deleteTask(task.id)
@@ -453,39 +544,7 @@ function App() {
           }
         : currentTask,
     )
-    const state = {
-      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
-      lists: listsState.lists,
-      tasks: nextTasks,
-      updatedAt: timestamp,
-    }
-
-    if (syncDisabled.current) {
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-      setSyncStatus('local')
-      return 'local'
-    }
-
-    setSyncStatus('saving')
-    try {
-      const result = await saveSyncState(state)
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-
-      if (result.disabled) {
-        syncDisabled.current = true
-        setSyncStatus('local')
-        return 'local'
-      }
-
-      lastSavedCloudState.current = JSON.stringify(state)
-      setSyncStatus('synced')
-      return 'synced'
-    } catch (error) {
-      setSyncStatus('error')
-      throw error
-    }
+    return syncManualTasks(nextTasks)
   }
 
   const handleSaveTaskPriority = async (task: Task, priority: TaskPriority) => {
@@ -499,13 +558,6 @@ function App() {
         ? { ...currentTask, priority, updatedAt: timestamp }
         : currentTask,
     )
-    const state = {
-      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
-      lists: listsState.lists,
-      tasks: nextTasks,
-      updatedAt: timestamp,
-    }
-
     const showHighPriorityAlert = () => {
       if (priority !== 'high' || task.completed || task.dueDate !== todayISO()) return
       const tag = `${task.id}:high-day:${task.dueDate}`
@@ -521,34 +573,9 @@ function App() {
       ])
     }
 
-    if (syncDisabled.current) {
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-      setSyncStatus('local')
-      showHighPriorityAlert()
-      return 'local'
-    }
-
-    setSyncStatus('saving')
-    try {
-      const result = await saveSyncState(state)
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-      showHighPriorityAlert()
-
-      if (result.disabled) {
-        syncDisabled.current = true
-        setSyncStatus('local')
-        return 'local'
-      }
-
-      lastSavedCloudState.current = JSON.stringify(state)
-      setSyncStatus('synced')
-      return 'synced'
-    } catch (error) {
-      setSyncStatus('error')
-      throw error
-    }
+    const result = await syncManualTasks(nextTasks)
+    showHighPriorityAlert()
+    return result
   }
 
   const handleSaveTaskList = async (task: Task, listId: string) => {
@@ -563,39 +590,7 @@ function App() {
         ? { ...currentTask, listId, color, updatedAt: timestamp }
         : currentTask,
     )
-    const state = {
-      deletedSeedTaskIds: tasksState.deletedSeedTaskIds,
-      lists: listsState.lists,
-      tasks: nextTasks,
-      updatedAt: timestamp,
-    }
-
-    if (syncDisabled.current) {
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-      setSyncStatus('local')
-      return 'local'
-    }
-
-    setSyncStatus('saving')
-    try {
-      const result = await saveSyncState(state)
-      skipNextAutosync.current = true
-      tasksState.replaceTasks(nextTasks)
-
-      if (result.disabled) {
-        syncDisabled.current = true
-        setSyncStatus('local')
-        return 'local'
-      }
-
-      lastSavedCloudState.current = JSON.stringify(state)
-      setSyncStatus('synced')
-      return 'synced'
-    } catch (error) {
-      setSyncStatus('error')
-      throw error
-    }
+    return syncManualTasks(nextTasks)
   }
 
   return (

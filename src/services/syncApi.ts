@@ -6,6 +6,10 @@ type SyncResponse = {
   error?: string
 }
 
+export class SyncConflictError extends Error {
+  code = 'sync-conflict'
+}
+
 const syncApiBaseUrl = import.meta.env.VITE_SYNC_API_BASE_URL?.trim().replace(/\/$/, '') ?? ''
 const syncStateUrl = `${syncApiBaseUrl}/api/sync/state`
 
@@ -24,18 +28,22 @@ export async function fetchSyncState() {
   return { disabled: false, state: data.state ?? null }
 }
 
-export async function saveSyncState(state: SyncState) {
+export async function saveSyncState(state: SyncState, baseUpdatedAt?: string) {
   const response = await fetch(syncStateUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ baseUpdatedAt, state }),
   })
   const data = (await response.json().catch(() => ({}))) as SyncResponse
 
   if (response.status === 404 && data.code === 'sync-disabled') {
     return { disabled: true }
+  }
+
+  if (response.status === 409 && data.code === 'sync-conflict') {
+    throw new SyncConflictError(data.error ?? 'El estado remoto cambió mientras se guardaba.')
   }
 
   if (!response.ok) {

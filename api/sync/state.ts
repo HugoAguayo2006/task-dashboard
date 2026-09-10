@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 type VercelRequest = {
   method?: string
   body?: unknown
@@ -14,12 +16,30 @@ type VercelResponse = {
 type SyncState = {
   deletedSeedTaskIds?: string[]
   externalCalendarState?: {
+    entries?: Record<string, {
+      hidden?: boolean
+      hiddenUpdatedAt?: string
+      reviewed?: boolean
+      reviewedUpdatedAt?: string
+    }>
     hiddenIds: string[]
     reviewedIds: string[]
+    updatedAt?: string
   }
+  listTombstones?: Record<string, string>
   lists: unknown[]
+  taskTombstones?: Record<string, string>
   tasks: unknown[]
   updatedAt: string
+}
+
+function isStringRecord(value: unknown) {
+  return value === undefined || (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.values(value as Record<string, unknown>).every((item) => typeof item === 'string')
+  )
 }
 
 function isSyncState(value: unknown): value is SyncState {
@@ -35,13 +55,20 @@ function isSyncState(value: unknown): value is SyncState {
       Array.isArray(state.externalCalendarState.hiddenIds) &&
       state.externalCalendarState.hiddenIds.every((eventId) => typeof eventId === 'string') &&
       Array.isArray(state.externalCalendarState.reviewedIds) &&
-      state.externalCalendarState.reviewedIds.every((eventId) => typeof eventId === 'string'))
+      state.externalCalendarState.reviewedIds.every((eventId) => typeof eventId === 'string') &&
+      (state.externalCalendarState.entries === undefined ||
+        (typeof state.externalCalendarState.entries === 'object' &&
+          !Array.isArray(state.externalCalendarState.entries))) &&
+      (state.externalCalendarState.updatedAt === undefined ||
+        typeof state.externalCalendarState.updatedAt === 'string'))
   return (
     Array.isArray(state.lists) &&
     Array.isArray(state.tasks) &&
     typeof state.updatedAt === 'string' &&
     hasDeletedSeedTaskIds &&
-    hasExternalCalendarState
+    hasExternalCalendarState &&
+    isStringRecord(state.listTombstones) &&
+    isStringRecord(state.taskTombstones)
   )
 }
 
@@ -135,12 +162,19 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return
     }
 
-    response.status(200).json({ state: payload[0]?.data ?? null })
+    const row = payload[0]
+    const state = row?.data
+      ? { ...row.data, updatedAt: row.updated_at ?? row.data.updatedAt }
+      : null
+    response.status(200).json({ state })
     return
   }
 
   if (request.method === 'PUT') {
-    const body = (await readBody(request)) as { state?: unknown } | undefined
+    const body = (await readBody(request)) as {
+      baseUpdatedAt?: unknown
+      state?: unknown
+    } | undefined
     if (!isSyncState(body?.state)) {
       response.status(400).json({
         code: 'invalid-state',
@@ -149,20 +183,49 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return
     }
 
+    if (body?.baseUpdatedAt !== undefined && typeof body.baseUpdatedAt !== 'string') {
+      response.status(400).json({
+        code: 'invalid-base-version',
+        error: 'La versión base de sincronización no es válida.',
+      })
+      return
+    }
+
+    const expectedUpdatedAt = body.baseUpdatedAt
+    endpoint.searchParams.set('select', 'updated_at')
+    if (expectedUpdatedAt) {
+      endpoint.searchParams.set('id', `eq.${syncConfig.syncId}`)
+      endpoint.searchParams.set('updated_at', `eq.${expectedUpdatedAt}`)
+    }
+
     const supabaseResponse = await fetch(endpoint, {
-      method: 'POST',
+      method: expectedUpdatedAt ? 'PATCH' : 'POST',
       headers: {
         ...headers,
-        Prefer: 'resolution=merge-duplicates',
+        Prefer: expectedUpdatedAt
+          ? 'return=representation'
+          : 'resolution=ignore-duplicates,return=representation',
       },
-      body: JSON.stringify({
-        id: syncConfig.syncId,
-        data: body.state,
-        updated_at: body.state.updatedAt,
-      }),
+      body: JSON.stringify(expectedUpdatedAt
+        ? { data: body.state, updated_at: body.state.updatedAt }
+        : { id: syncConfig.syncId, data: body.state, updated_at: body.state.updatedAt }),
     })
 
     const payload = await supabaseResponse.text()
+    const savedRows = (() => {
+      try {
+        return JSON.parse(payload) as unknown[]
+      } catch {
+        return []
+      }
+    })()
+    if (supabaseResponse.status === 409 || (supabaseResponse.ok && savedRows.length === 0)) {
+      response.status(409).json({
+        code: 'sync-conflict',
+        error: 'El estado remoto cambió mientras se guardaba. Vuelve a reconciliar y reintenta.',
+      })
+      return
+    }
     if (!supabaseResponse.ok) {
       response.status(supabaseResponse.status).json({
         code: 'sync-error',
@@ -181,4 +244,3 @@ export default async function handler(request: VercelRequest, response: VercelRe
     error: 'Usa GET o PUT.',
   })
 }
-import process from 'node:process'

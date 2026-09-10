@@ -283,7 +283,9 @@ export const initialTaskDrafts: SeedTask[] = [
 ]
 
 export function makeInitialTasks() {
-  const now = new Date().toISOString()
+  // Seed data must have a stable timestamp. Giving it "now" on every new device
+  // would make untouched defaults look newer than real cloud edits.
+  const seedTimestamp = '2026-06-27T12:00:00.000Z'
   const byId = new Map(initialLists.map((list) => [list.id, list]))
 
   return initialTaskDrafts.map((task): Task => ({
@@ -292,7 +294,7 @@ export function makeInitialTasks() {
     color: byId.get(task.listId)?.color ?? '#60a5fa',
     completed: false,
     source: 'manual',
-    createdAt: now,
-    updatedAt: now,
+    createdAt: seedTimestamp,
+    updatedAt: seedTimestamp,
   }))
 }

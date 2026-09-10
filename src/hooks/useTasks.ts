@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft } from '../types/task'
+import type { SyncTombstones } from '../types/sync'
 import { makeInitialTasks } from '../data/initialWorkspace'
 import { addToISODate, monthlyRecurringTaskTitle } from '../utils/dates'
 import { isSeedTaskId, mergeInitialTasks } from '../utils/mergeTasks'
@@ -199,10 +200,17 @@ export function useTasks(lists: TaskList[]) {
   const [deletedSeedTaskIds, setDeletedSeedTaskIds] = useState<string[]>(() =>
     readStorage('deleted-seed-task-ids', []),
   )
+  const [taskTombstones, setTaskTombstones] = useState<SyncTombstones>(() =>
+    readStorage('task-tombstones', {}),
+  )
   const [tasks, setTasks] = useState<Task[]>(() =>
-    normalizeForeverRecurrences(normalizeMonthlyRecurrenceTitles(
-      mergeInitialTasks(readStorage('tasks', makeInitialTasks()), readStorage('deleted-seed-task-ids', [])),
-    )),
+    {
+      const storedTombstones = readStorage<SyncTombstones>('task-tombstones', {})
+      return normalizeForeverRecurrences(normalizeMonthlyRecurrenceTitles(
+        mergeInitialTasks(readStorage('tasks', makeInitialTasks()), readStorage('deleted-seed-task-ids', []))
+          .filter((task) => !storedTombstones[task.id]),
+      ))
+    },
   )
 
   const listColors = useMemo(() => new Map(lists.map((list) => [list.id, list.color])), [lists])
@@ -214,6 +222,10 @@ export function useTasks(lists: TaskList[]) {
   useEffect(() => {
     writeStorage('deleted-seed-task-ids', deletedSeedTaskIds)
   }, [deletedSeedTaskIds])
+
+  useEffect(() => {
+    writeStorage('task-tombstones', taskTombstones)
+  }, [taskTombstones])
 
   useEffect(() => {
     setTasks((current) => mergeInitialTasks(current, deletedSeedTaskIds))
@@ -344,20 +356,39 @@ export function useTasks(lists: TaskList[]) {
 
   const deleteTask = (id: string) => {
     setTasks((current) => current.filter((task) => task.id !== id))
+    setTaskTombstones((current) => ({ ...current, [id]: new Date().toISOString() }))
     if (isSeedTaskId(id)) {
       setDeletedSeedTaskIds((current) => (current.includes(id) ? current : [...current, id]))
     }
   }
 
   const deleteTaskSeries = (recurrenceId: string) => {
-    setTasks((current) => current.filter((task) => task.recurrenceId !== recurrenceId))
+    setTasks((current) => {
+      const timestamp = new Date().toISOString()
+      const deletedIds = current
+        .filter((task) => task.recurrenceId === recurrenceId)
+        .map((task) => task.id)
+      if (deletedIds.length) {
+        setTaskTombstones((tombstones) => ({
+          ...tombstones,
+          ...Object.fromEntries(deletedIds.map((id) => [id, timestamp])),
+        }))
+      }
+      return current.filter((task) => task.recurrenceId !== recurrenceId)
+    })
   }
 
-  const replaceTasks = (nextTasks: Task[], nextDeletedSeedTaskIds = deletedSeedTaskIds) => {
+  const replaceTasks = (
+    nextTasks: Task[],
+    nextDeletedSeedTaskIds = deletedSeedTaskIds,
+    nextTaskTombstones = taskTombstones,
+  ) => {
     setTasks(normalizeForeverRecurrences(normalizeMonthlyRecurrenceTitles(
-      mergeInitialTasks(nextTasks, nextDeletedSeedTaskIds),
+      mergeInitialTasks(nextTasks, nextDeletedSeedTaskIds)
+        .filter((task) => !nextTaskTombstones[task.id]),
     )))
     setDeletedSeedTaskIds(nextDeletedSeedTaskIds)
+    setTaskTombstones(nextTaskTombstones)
   }
 
   return {
@@ -366,6 +397,7 @@ export function useTasks(lists: TaskList[]) {
     deleteTaskSeries,
     deletedSeedTaskIds,
     replaceTasks,
+    taskTombstones,
     tasks,
     toggleTask,
     updateTask,
