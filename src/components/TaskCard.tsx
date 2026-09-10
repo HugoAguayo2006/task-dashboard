@@ -1,13 +1,13 @@
 import type { CSSProperties } from 'react'
 import type { Task } from '../types/task'
-import { readableColor, visibleOnLightColor } from '../utils/colors'
+import { readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { formatTaskDateLabel, isOverdue } from '../utils/dates'
+import { Icon } from './Icon'
 
 type TaskCardProps = {
   task: Task
   compact?: boolean
   onComplete: (task: Task) => void
-  onDelete: (task: Task) => void
   onEdit: (task: Task) => void
   onOpen: (task: Task) => void
 }
@@ -16,17 +16,17 @@ export function TaskCard({
   compact = false,
   task,
   onComplete,
-  onDelete,
   onEdit,
   onOpen,
 }: TaskCardProps) {
   const overdue = isOverdue(task)
-  const visibleColor = visibleOnLightColor(task.color)
+  const darkVisibleColor = visibleOnDarkColor(task.color)
+  const lightVisibleColor = visibleOnLightColor(task.color)
   const taskAccentStyle = {
-    '--task-color': task.color,
-    '--task-visible-color': visibleColor,
-    '--task-text-color': readableColor(task.color),
-    '--task-visible-text-color': readableColor(visibleColor),
+    '--task-dark-color': darkVisibleColor,
+    '--task-light-color': lightVisibleColor,
+    '--task-dark-text-color': readableColor(darkVisibleColor),
+    '--task-light-text-color': readableColor(lightVisibleColor),
   } as CSSProperties
 
   return (
@@ -40,7 +40,7 @@ export function TaskCard({
         type="button"
         onClick={() => onComplete(task)}
       >
-        {task.completed ? '✓' : ''}
+        {task.completed ? <Icon name="check" size={16} /> : null}
       </button>
 
       <button className="task-content" type="button" onClick={() => onOpen(task)}>
@@ -68,17 +68,12 @@ export function TaskCard({
       </button>
 
       <div className="task-actions">
-        {task.source === 'manual' ? (
-          <button aria-label="Editar tarea" type="button" onClick={() => onEdit(task)}>
-            ⋯
-          </button>
-        ) : null}
         <button
-          aria-label={task.source === 'canvas' ? 'Ocultar tarea de Canvas' : 'Eliminar tarea'}
+          aria-label={task.source === 'manual' ? 'Editar tarea' : 'Ver opciones de tarea'}
           type="button"
-          onClick={() => onDelete(task)}
+          onClick={() => task.source === 'manual' ? onEdit(task) : onOpen(task)}
         >
-          ×
+          <Icon name="more" />
         </button>
       </div>
     </article>

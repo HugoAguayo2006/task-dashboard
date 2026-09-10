@@ -2,9 +2,10 @@ import { useState, type CSSProperties, type DragEvent } from 'react'
 import { TaskCard } from '../components/TaskCard'
 import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
-import { readableColor, visibleOnLightColor } from '../utils/colors'
+import { readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { isOverdue } from '../utils/dates'
 import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
+import { Icon } from '../components/Icon'
 
 type DashboardProps = {
   allTasks: Task[]
@@ -12,7 +13,6 @@ type DashboardProps = {
   lists: TaskList[]
   tasks: Task[]
   onComplete: (task: Task) => void
-  onDelete: (task: Task) => void
   onEdit: (task: Task) => void
   onOpen: (task: Task) => void
   onReorderLists: (sourceId: string, targetId: string) => void
@@ -24,7 +24,6 @@ export function Dashboard({
   lists,
   tasks,
   onComplete,
-  onDelete,
   onEdit,
   onOpen,
   onReorderLists,
@@ -75,12 +74,13 @@ export function Dashboard({
           const visibleCompletedTasks = getNextTaskPerRecurringSeries(completedTasks)
           const completedCount = countTasksOncePerRecurringSeries(completedTasks)
           const completedOpen = completedOnly || expandedCompleted[list.id]
-          const visibleColor = visibleOnLightColor(list.color)
+          const darkVisibleColor = visibleOnDarkColor(list.color)
+          const lightVisibleColor = visibleOnLightColor(list.color)
           const listAccentStyle = {
-            '--task-color': list.color,
-            '--task-visible-color': visibleColor,
-            '--task-text-color': readableColor(list.color),
-            '--task-visible-text-color': readableColor(visibleColor),
+            '--task-dark-color': darkVisibleColor,
+            '--task-light-color': lightVisibleColor,
+            '--task-dark-text-color': readableColor(darkVisibleColor),
+            '--task-light-text-color': readableColor(lightVisibleColor),
           } as CSSProperties
 
           return (
@@ -113,7 +113,7 @@ export function Dashboard({
                   <h2>{list.name}</h2>
                   <small>{pendingCount} pendientes · arrastra para ordenar</small>
                 </div>
-                <span className="drag-handle" aria-hidden="true">⋮⋮</span>
+                <span className="drag-handle" aria-hidden="true"><Icon name="drag" /></span>
               </header>
 
               <div className="pending-stack">
@@ -124,7 +124,6 @@ export function Dashboard({
                       compact
                       task={task}
                       onComplete={onComplete}
-                      onDelete={onDelete}
                       onEdit={onEdit}
                       onOpen={onOpen}
                     />
@@ -145,7 +144,7 @@ export function Dashboard({
                     }))
                   }
                 >
-                  <span aria-hidden="true">{completedOpen ? '⌄' : '›'}</span>
+                  <Icon name={completedOpen ? 'chevron-down' : 'chevron-right'} size={17} />
                   Completadas ({completedCount})
                 </button>
 
@@ -157,7 +156,6 @@ export function Dashboard({
                         compact
                         task={task}
                         onComplete={onComplete}
-                        onDelete={onDelete}
                         onEdit={onEdit}
                         onOpen={onOpen}
                       />

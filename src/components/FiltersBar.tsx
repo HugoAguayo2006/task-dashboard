@@ -41,6 +41,7 @@ export function FiltersBar({
           <div className="segmented-control" aria-label="Modo de calendario">
             {(['month', 'week', 'agenda'] as CalendarMode[]).map((mode) => (
               <button
+                aria-pressed={calendarMode === mode}
                 className={calendarMode === mode ? 'active' : ''}
                 key={mode}
                 type="button"

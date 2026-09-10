@@ -1,4 +1,4 @@
-import type { Task, TaskFilters } from '../types/task'
+import type { RepeatUnit, Task, TaskFilters } from '../types/task'
 
 function localISODate(date: Date) {
   const year = date.getFullYear()
@@ -17,7 +17,7 @@ export function addDaysISO(days: number) {
   return localISODate(date)
 }
 
-export function addToISODate(date: string, amount: number, unit: 'day' | 'week' | 'month') {
+export function addToISODate(date: string, amount: number, unit: RepeatUnit) {
   const next = new Date(`${date}T12:00:00`)
   if (unit === 'day') {
     next.setDate(next.getDate() + amount)
@@ -29,6 +29,13 @@ export function addToISODate(date: string, amount: number, unit: 'day' | 'week' 
     const originalDay = next.getDate()
     next.setMonth(next.getMonth() + amount, 1)
     const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+    next.setDate(Math.min(originalDay, lastDay))
+  }
+  if (unit === 'year') {
+    const originalMonth = next.getMonth()
+    const originalDay = next.getDate()
+    next.setFullYear(next.getFullYear() + amount, originalMonth, 1)
+    const lastDay = new Date(next.getFullYear(), originalMonth + 1, 0).getDate()
     next.setDate(Math.min(originalDay, lastDay))
   }
   return localISODate(next)

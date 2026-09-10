@@ -3,6 +3,7 @@ import type { TaskList } from '../types/list'
 import type { Task } from '../types/task'
 import { palette } from '../utils/colors'
 import { countTasksOncePerRecurringSeries } from '../utils/taskCounts'
+import { Icon } from './Icon'
 
 type ListManagerProps = {
   lists: TaskList[]
@@ -51,7 +52,7 @@ export function ListManager({
           value={color}
           onChange={(event) => setColor(event.target.value)}
         />
-        <button type="submit">+</button>
+        <button aria-label="Crear lista" type="submit"><Icon name="add" /></button>
       </form>
 
       <div className="manager-list">
@@ -87,10 +88,10 @@ export function ListManager({
               type="button"
               onClick={() => onToggleVisibility(list.id)}
             >
-              <span aria-hidden="true">{list.hidden ? '◌' : '●'}</span>
+              <Icon name={list.hidden ? 'eye-off' : 'eye'} size={17} />
             </button>
             <button aria-label={`Eliminar ${list.name}`} type="button" onClick={() => onDelete(list.id)}>
-              ×
+              <Icon name="close" size={17} />
             </button>
           </div>
         ))}

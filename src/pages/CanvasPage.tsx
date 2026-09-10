@@ -8,12 +8,11 @@ type CanvasPageProps = {
     status: CanvasStatus
   }
   tasks: Task[]
-  onHide: (id: string) => void
   onOpen: (task: Task) => void
   onReview: (id: string) => void
 }
 
-export function CanvasPage({ canvasState, tasks, onHide, onOpen, onReview }: CanvasPageProps) {
+export function CanvasPage({ canvasState, tasks, onOpen, onReview }: CanvasPageProps) {
   if (canvasState.status === 'loading') {
     return (
       <section className="canvas-page">
@@ -37,7 +36,6 @@ export function CanvasPage({ canvasState, tasks, onHide, onOpen, onReview }: Can
               key={task.id}
               task={task}
               onComplete={() => onReview(task.id)}
-              onDelete={() => onHide(task.id)}
               onEdit={() => undefined}
               onOpen={onOpen}
             />

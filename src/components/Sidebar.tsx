@@ -1,6 +1,9 @@
+import type { CSSProperties } from 'react'
 import type { TaskList } from '../types/list'
 import type { AppView, Task } from '../types/task'
+import { visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { ListManager } from './ListManager'
+import { Icon, type IconName } from './Icon'
 
 type SidebarProps = {
   activeView: AppView
@@ -19,12 +22,12 @@ type SidebarProps = {
   onViewChange: (view: AppView) => void
 }
 
-const navItems: Array<{ id: AppView; label: string; icon: string }> = [
-  { id: 'lists', label: 'Listas', icon: '≡' },
-  { id: 'today', label: 'Hoy', icon: '!' },
-  { id: 'tomorrow', label: 'Mañana', icon: '›' },
-  { id: 'calendar', label: 'Calendario', icon: '◫' },
-  { id: 'canvas', label: 'Canvas', icon: '◇' },
+const navItems: Array<{ id: AppView; label: string; icon: IconName }> = [
+  { id: 'lists', label: 'Listas', icon: 'list' },
+  { id: 'today', label: 'Hoy', icon: 'today' },
+  { id: 'tomorrow', label: 'Mañana', icon: 'tomorrow' },
+  { id: 'calendar', label: 'Calendario', icon: 'calendar' },
+  { id: 'canvas', label: 'Canvas', icon: 'canvas' },
 ]
 
 export function Sidebar({
@@ -57,7 +60,7 @@ export function Sidebar({
             type="button"
             onClick={onToggleCollapsed}
           >
-            {collapsed ? '›' : '‹'}
+            <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} />
           </button>
           <button
             aria-label="Cerrar navegación"
@@ -65,24 +68,25 @@ export function Sidebar({
             type="button"
             onClick={onToggleOpen}
           >
-            ×
+            <Icon name="close" />
           </button>
         </div>
 
         <button className="create-button" type="button" onClick={onCreateTask}>
-          <span aria-hidden="true">+</span>
+          <Icon name="add" />
           <span className="sidebar-label">Crear tarea</span>
         </button>
 
         <nav className="nav-list" aria-label="Navegación principal">
           {navItems.map((item) => (
             <button
+              aria-current={activeView === item.id ? 'page' : undefined}
               className={activeView === item.id ? 'active' : ''}
               key={item.id}
               type="button"
               onClick={() => onViewChange(item.id)}
             >
-              <span aria-hidden="true">{item.icon}</span>
+              <Icon name={item.icon} />
               <span className="sidebar-label">{item.label}</span>
             </button>
           ))}
@@ -100,8 +104,14 @@ export function Sidebar({
         ) : (
           <div className="collapsed-list-dots" aria-label="Listas">
             {lists.filter((list) => !list.hidden).map((list) => (
-              <button key={list.id} type="button" onClick={() => onSelectList(list.id)}>
-                <span className="color-dot" style={{ background: list.color }}></span>
+              <button aria-label={`Abrir ${list.name}`} key={list.id} title={list.name} type="button" onClick={() => onSelectList(list.id)}>
+                <span
+                  className="color-dot"
+                  style={{
+                    '--list-dark-color': visibleOnDarkColor(list.color),
+                    '--list-light-color': visibleOnLightColor(list.color),
+                  } as CSSProperties}
+                />
               </button>
             ))}
           </div>

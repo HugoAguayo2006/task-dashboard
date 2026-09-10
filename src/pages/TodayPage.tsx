@@ -4,6 +4,7 @@ import type { TaskList } from '../types/list'
 import type { Task, TaskFilters, TaskPriority } from '../types/task'
 import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from '../utils/dates'
 import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
+import { Icon, type IconName } from '../components/Icon'
 
 export type TodayDateScope = 'focus' | 'today' | 'overdue' | 'upcoming' | 'all'
 
@@ -18,7 +19,6 @@ type TodayPageProps = {
   tasks: Task[]
   onComplete: (task: Task) => void
   onCreateTodayTask: () => void
-  onDelete: (task: Task) => void
   onEdit: (task: Task) => void
   onFiltersChange: (filters: TodayFilters) => void
   onOpen: (task: Task) => void
@@ -59,7 +59,6 @@ export function TodayPage({
   tasks,
   onComplete,
   onCreateTodayTask,
-  onDelete,
   onEdit,
   onFiltersChange,
   onOpen,
@@ -129,7 +128,7 @@ export function TodayPage({
               Limpiar
             </button>
             <button className="primary-button" type="button" onClick={onCreateTodayTask}>
-              <span aria-hidden="true">+</span>
+              <Icon name="add" />
               {isTomorrow ? 'Mañana' : 'Hoy'}
             </button>
           </div>
@@ -189,7 +188,6 @@ export function TodayPage({
             tone="primary"
             tasks={pendingVisibleTodayTasks}
             onComplete={onComplete}
-            onDelete={onDelete}
             onEdit={onEdit}
             onOpen={onOpen}
           />
@@ -201,7 +199,6 @@ export function TodayPage({
             tone="warning"
             tasks={overdueTasks}
             onComplete={onComplete}
-            onDelete={onDelete}
             onEdit={onEdit}
             onOpen={onOpen}
           />
@@ -213,7 +210,6 @@ export function TodayPage({
             tone="completed"
             tasks={completedVisibleTodayTasks}
             onComplete={onComplete}
-            onDelete={onDelete}
             onEdit={onEdit}
             onOpen={onOpen}
           />
@@ -235,7 +231,6 @@ type TodayGroupProps = {
   tone: string
   tasks: Task[]
   onComplete: (task: Task) => void
-  onDelete: (task: Task) => void
   onEdit: (task: Task) => void
   onOpen: (task: Task) => void
 }
@@ -246,14 +241,15 @@ function TodayGroup({
   tone,
   tasks,
   onComplete,
-  onDelete,
   onEdit,
   onOpen,
 }: TodayGroupProps) {
   return (
     <section className={`today-group today-group-${tone}`}>
       <header className="today-group-header">
-        <span aria-hidden="true">{tone === 'warning' ? '!' : tone === 'primary' ? '•' : '›'}</span>
+        <span aria-hidden="true">
+          <Icon name={(tone === 'warning' ? 'warning' : tone === 'primary' ? 'today' : 'check') as IconName} />
+        </span>
         <div>
           <h2>{title}</h2>
           <p>{subtitle}</p>
@@ -266,7 +262,6 @@ function TodayGroup({
             key={task.id}
             task={task}
             onComplete={onComplete}
-            onDelete={onDelete}
             onEdit={onEdit}
             onOpen={onOpen}
           />

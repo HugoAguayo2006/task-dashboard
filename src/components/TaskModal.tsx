@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type UIEvent } from 'react'
 import type { TaskList } from '../types/list'
 import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
-import { readableColor, visibleOnLightColor } from '../utils/colors'
+import { palette, readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
+import { Icon } from './Icon'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
 type DateSaveResult = 'synced' | 'local'
@@ -15,6 +16,7 @@ type TaskModalProps = {
   task: Task | null
   onClose: () => void
   onComplete: (task: Task) => void
+  onCreateList: (name: string, color: string) => string | undefined
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
   onEdit: (task: Task) => void
@@ -50,15 +52,6 @@ const repeatPresets: Record<RepeatPreset, Pick<TaskDraft['repeat'], 'enabled' | 
   custom: { enabled: true, interval: 1, unit: 'week', forever: false },
 }
 
-function repeatPresetFromDraft(repeat: TaskDraft['repeat']): RepeatPreset {
-  if (!repeat.enabled) return 'none'
-  if (repeat.interval === 3 && repeat.unit === 'day') return 'three-days'
-  if (repeat.interval === 1 && repeat.unit === 'week') return 'weekly'
-  if (repeat.interval === 2 && repeat.unit === 'week') return 'biweekly'
-  if (repeat.interval === 1 && repeat.unit === 'month') return 'monthly'
-  return 'custom'
-}
-
 function normalizeOccurrences(value: string | number) {
   const numericValue = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(numericValue)) return 2
@@ -68,6 +61,7 @@ function normalizeOccurrences(value: string | number) {
 const wheelHours = Array.from({ length: 12 }, (_, index) => String(index + 1))
 const wheelMinutes = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'))
 const wheelPeriods = ['a.m.', 'p.m.']
+const wheelItemHeight = 44
 
 function TimeWheelColumn({
   label,
@@ -85,14 +79,14 @@ function TimeWheelColumn({
 
   useEffect(() => {
     const index = Math.max(0, options.indexOf(value))
-    columnRef.current?.scrollTo({ top: index * 36 })
+    columnRef.current?.scrollTo({ top: index * wheelItemHeight })
   }, [options, value])
 
   const selectNearest = (event: UIEvent<HTMLDivElement>) => {
     if (scrollTimer.current) clearTimeout(scrollTimer.current)
     const column = event.currentTarget
     scrollTimer.current = setTimeout(() => {
-      const index = Math.max(0, Math.min(options.length - 1, Math.round(column.scrollTop / 36)))
+      const index = Math.max(0, Math.min(options.length - 1, Math.round(column.scrollTop / wheelItemHeight)))
       onChange(options[index])
     }, 80)
   }
@@ -143,6 +137,7 @@ export function TaskModal({
   task,
   onClose,
   onComplete,
+  onCreateList,
   onDelete,
   onDeleteSeries,
   onEdit,
@@ -153,10 +148,14 @@ export function TaskModal({
 }: TaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(emptyDraft)
   const [tagText, setTagText] = useState('')
+  const [showNewListComposer, setShowNewListComposer] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [newListColor, setNewListColor] = useState(palette[0])
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [occurrencesText, setOccurrencesText] = useState(String(emptyDraft.repeat.occurrences))
+  const [repeatPreset, setRepeatPreset] = useState<RepeatPreset>('none')
   const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
   const [detailDueTime, setDetailDueTime] = useState(task?.dueTime ?? '')
   const [detailPriority, setDetailPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
@@ -166,6 +165,7 @@ export function TaskModal({
   const [prioritySaveStatus, setPrioritySaveStatus] = useState<DateSaveStatus>('idle')
   const [listSaveStatus, setListSaveStatus] = useState<DateSaveStatus>('idle')
   const initializedFormContext = useRef<string | null>(null)
+  const modalRef = useRef<HTMLElement | null>(null)
   const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving' || listSaveStatus === 'saving'
 
   useEffect(() => {
@@ -198,7 +198,10 @@ export function TaskModal({
         : { ...emptyDraft, dueDate: defaultDueDate ?? todayISO(), listId: defaultListId },
     )
     setTagText(task?.tags.join(', ') ?? '')
+    setShowNewListComposer(false)
+    setNewListName('')
     setShowTimePicker(false)
+    setRepeatPreset('none')
     setOccurrencesText(String(task ? emptyDraft.repeat.occurrences : emptyDraft.repeat.occurrences))
   }, [defaultDueDate, lists, task])
 
@@ -220,17 +223,42 @@ export function TaskModal({
     if (isSavingDetail) return
     onClose()
   }, [isSavingDetail, onClose])
+  const closeModalRef = useRef(closeModal)
+  closeModalRef.current = closeModal
 
   useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.requestAnimationFrame(() => modalRef.current?.querySelector<HTMLElement>('button:not(:disabled), input:not(:disabled)')?.focus())
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        closeModal()
+        closeModalRef.current()
+      }
+      if (event.key !== 'Tab' || !modalRef.current) return
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'),
+      )
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
       }
     }
 
     window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [closeModal])
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus()
+    }
+  }, [])
 
   const listName =
     task?.source === 'external-calendar'
@@ -254,7 +282,6 @@ export function TaskModal({
       setDateSaveStatus('error')
     }
   }
-  const repeatPreset = repeatPresetFromDraft(draft.repeat)
   const selectedTime = timeParts(draft.dueTime || '09:00')
   const selectedDetailTime = timeParts(detailDueTime || '09:00')
   const openTimePicker = () => {
@@ -304,6 +331,7 @@ export function TaskModal({
     }
   }
   const changeRepeatPreset = (preset: RepeatPreset) => {
+    setRepeatPreset(preset)
     setDraft((current) => ({
       ...current,
       repeat: {
@@ -324,13 +352,21 @@ export function TaskModal({
     }))
     return occurrences
   }
-  const visibleColor = task ? visibleOnLightColor(task.color) : ''
+  const createAndSelectList = () => {
+    const listId = onCreateList(newListName, newListColor)
+    if (!listId) return
+    setDraft((current) => ({ ...current, listId }))
+    setNewListName('')
+    setShowNewListComposer(false)
+  }
+  const darkVisibleColor = task ? visibleOnDarkColor(task.color) : ''
+  const lightVisibleColor = task ? visibleOnLightColor(task.color) : ''
   const taskAccentStyle = task
     ? ({
-        '--task-color': task.color,
-        '--task-visible-color': visibleColor,
-        '--task-text-color': readableColor(task.color),
-        '--task-visible-text-color': readableColor(visibleColor),
+        '--task-dark-color': darkVisibleColor,
+        '--task-light-color': lightVisibleColor,
+        '--task-dark-text-color': readableColor(darkVisibleColor),
+        '--task-light-text-color': readableColor(lightVisibleColor),
       } as CSSProperties)
     : undefined
 
@@ -338,9 +374,10 @@ export function TaskModal({
     <div className="modal-backdrop" role="presentation" onClick={closeModal}>
       <section
         className="task-modal"
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Detalle de tarea"
+        aria-label={mode === 'details' ? 'Detalle de tarea' : task ? 'Editar tarea' : 'Nueva tarea'}
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -350,7 +387,7 @@ export function TaskModal({
           type="button"
           onClick={closeModal}
         >
-          ×
+          <Icon name="close" />
         </button>
 
         {mode === 'details' && task ? (
@@ -441,6 +478,7 @@ export function TaskModal({
                   <dd>
                     <div className="time-field detail-time-field">
                       <button
+                        aria-expanded={showDetailTimePicker}
                         className="time-picker-trigger"
                         disabled={dateSaveStatus === 'saving'}
                         type="button"
@@ -454,7 +492,7 @@ export function TaskModal({
                             ? `${selectedDetailTime.hour}:${selectedDetailTime.minute} ${selectedDetailTime.period}`
                             : 'Sin hora'}
                         </span>
-                        <span aria-hidden="true">◷</span>
+                        <Icon name="clock" size={18} />
                       </button>
                       {showDetailTimePicker ? (
                         <div className="time-wheel-popover">
@@ -694,6 +732,7 @@ export function TaskModal({
                       Sin fecha
                     </button>
                     <button
+                      aria-expanded={showDatePicker}
                       className={showDatePicker ? 'active' : ''}
                       type="button"
                       onClick={() => setShowDatePicker((open) => !open)}
@@ -714,9 +753,9 @@ export function TaskModal({
               <div className="task-form-field">
                 <span>Hora</span>
                 <div className="time-field">
-                  <button className="time-picker-trigger" type="button" onClick={openTimePicker}>
+                  <button aria-expanded={showTimePicker} className="time-picker-trigger" type="button" onClick={openTimePicker}>
                     <span>{draft.dueTime ? `${selectedTime.hour}:${selectedTime.minute} ${selectedTime.period}` : 'Sin hora'}</span>
-                    <span aria-hidden="true">◷</span>
+                    <Icon name="clock" size={18} />
                   </button>
                   {showTimePicker ? (
                     <div className="time-wheel-popover">
@@ -736,19 +775,68 @@ export function TaskModal({
               </div>
             </div>
             <div className="form-grid">
-              <label>
-                Lista
+              <div className="task-form-field">
+                <label htmlFor="task-list-select">Lista</label>
                 <select
-                  value={draft.listId}
-                  onChange={(event) => setDraft({ ...draft, listId: event.target.value })}
+                  id="task-list-select"
+                  value={showNewListComposer ? '__new-list__' : draft.listId}
+                  onChange={(event) => {
+                    if (event.target.value === '__new-list__') {
+                      setShowNewListComposer(true)
+                      return
+                    }
+                    setShowNewListComposer(false)
+                    setDraft({ ...draft, listId: event.target.value })
+                  }}
                 >
                   {lists.map((list) => (
                     <option key={list.id} value={list.id}>
                       {list.name}
                     </option>
                   ))}
+                  <option value="__new-list__">Crear nueva lista…</option>
                 </select>
-              </label>
+                {showNewListComposer ? (
+                  <div className="new-list-composer" aria-label="Crear nueva lista">
+                    <input
+                      aria-label="Nombre de la nueva lista"
+                      autoFocus
+                      placeholder="Nombre de la nueva lista"
+                      value={newListName}
+                      onChange={(event) => setNewListName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          createAndSelectList()
+                        }
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setShowNewListComposer(false)
+                        }
+                      }}
+                    />
+                    <input
+                      aria-label="Color de la nueva lista"
+                      type="color"
+                      value={newListColor}
+                      onChange={(event) => setNewListColor(event.target.value)}
+                    />
+                    <div className="new-list-composer-actions">
+                      <button type="button" onClick={() => setShowNewListComposer(false)}>
+                        Cancelar
+                      </button>
+                      <button
+                        className="new-list-create-button"
+                        disabled={!newListName.trim()}
+                        type="button"
+                        onClick={createAndSelectList}
+                      >
+                        Crear lista
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <label>
                 Prioridad
                 <select
@@ -836,6 +924,7 @@ export function TaskModal({
                           <option value="day">Días</option>
                           <option value="week">Semanas</option>
                           <option value="month">Meses</option>
+                          <option value="year">Años</option>
                         </select>
                       </label>
                     </>
@@ -890,6 +979,11 @@ export function TaskModal({
               <button type="button" onClick={onClose}>
                 Cancelar
               </button>
+              {task ? (
+                <button className="danger-button" type="button" onClick={() => onDelete(task)}>
+                  Eliminar tarea
+                </button>
+              ) : null}
             </div>
           </form>
         )}
@@ -925,10 +1019,10 @@ function MiniCalendar({
         <strong>{monthTitle(visibleDate)}</strong>
         <div>
           <button aria-label="Mes anterior" type="button" onClick={() => moveMonth(-1)}>
-            ‹
+            <Icon name="chevron-left" />
           </button>
           <button aria-label="Mes siguiente" type="button" onClick={() => moveMonth(1)}>
-            ›
+            <Icon name="chevron-right" />
           </button>
         </div>
       </div>

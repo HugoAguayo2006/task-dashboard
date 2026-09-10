@@ -20,16 +20,15 @@ export function useLists() {
 
   const createList = (name: string, color: string) => {
     const cleanName = name.trim()
-    if (!cleanName) return
-    setLists((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        name: cleanName,
-        color,
-        createdAt: new Date().toISOString(),
-      },
-    ])
+    if (!cleanName) return undefined
+    const list = {
+      id: crypto.randomUUID(),
+      name: cleanName,
+      color,
+      createdAt: new Date().toISOString(),
+    }
+    setLists((current) => [...current, list])
+    return list.id
   }
 
   const updateList = (id: string, updates: Pick<TaskList, 'name' | 'color'>) => {

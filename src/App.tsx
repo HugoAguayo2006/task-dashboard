@@ -7,6 +7,7 @@ import { NotificationStatus } from './components/NotificationStatus'
 import { Sidebar } from './components/Sidebar'
 import { SyncStatusBar } from './components/SyncStatusBar'
 import { TaskModal } from './components/TaskModal'
+import { Icon } from './components/Icon'
 import { CalendarPage } from './pages/CalendarPage'
 import { CanvasPage } from './pages/CanvasPage'
 import { Dashboard } from './pages/Dashboard'
@@ -88,6 +89,8 @@ function App() {
   const skipNextAutosync = useRef(false)
   const workspaceRef = useRef<HTMLElement | null>(null)
   const settingsRef = useRef<HTMLDivElement | null>(null)
+  const settingsPanelRef = useRef<HTMLDivElement | null>(null)
+  const settingsToggleRef = useRef<HTMLButtonElement | null>(null)
 
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
@@ -158,7 +161,7 @@ function App() {
 
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
-    const themeColor = theme === 'dark' ? '#0c1017' : '#f4f7fb'
+    const themeColor = theme === 'dark' ? '#000000' : '#f2f2f7'
     const root = document.documentElement
     const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
 
@@ -171,11 +174,28 @@ function App() {
   useEffect(() => {
     if (!settingsOpen) return
 
+    const settingsToggle = settingsToggleRef.current
+    window.requestAnimationFrame(() => settingsPanelRef.current?.querySelector<HTMLElement>('button')?.focus())
+
     const closeSettings = (event: PointerEvent) => {
       if (!settingsRef.current?.contains(event.target as Node)) setSettingsOpen(false)
     }
     const closeSettingsWithKeyboard = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSettingsOpen(false)
+      if (event.key !== 'Tab' || !settingsPanelRef.current) return
+      const focusable = Array.from(
+        settingsPanelRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled)'),
+      )
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
 
     document.addEventListener('pointerdown', closeSettings)
@@ -183,6 +203,7 @@ function App() {
     return () => {
       document.removeEventListener('pointerdown', closeSettings)
       document.removeEventListener('keydown', closeSettingsWithKeyboard)
+      settingsToggle?.focus()
     }
   }, [settingsOpen])
 
@@ -371,18 +392,18 @@ function App() {
   }
 
   const handleDelete = (task: Task) => {
+    setSelectedTaskId(null)
+    setIsCreatingTask(false)
+    setEditingTask(null)
     if (task.source === 'canvas') {
       canvasState.hideTask(task.id)
-      setSelectedTaskId(null)
       return
     }
     if (task.source === 'external-calendar') {
       externalCalendarState.hideTask(task.id)
-      setSelectedTaskId(null)
       return
     }
     tasksState.deleteTask(task.id)
-    setSelectedTaskId(null)
   }
 
   const handleDeleteSeries = (task: Task) => {
@@ -603,7 +624,7 @@ function App() {
                 type="button"
                 onClick={() => setInAppNotifications((current) => current.filter((item) => item.tag !== notification.tag))}
               >
-                ×
+                <Icon name="close" />
               </button>
             </aside>
           ))}
@@ -673,10 +694,11 @@ function App() {
                 aria-expanded={settingsOpen}
                 aria-haspopup="true"
                 className="settings-toggle"
+                ref={settingsToggleRef}
                 type="button"
                 onClick={() => setSettingsOpen((open) => !open)}
               >
-                <span aria-hidden="true">⚙</span>
+                <Icon name="gear" />
                 <span>Ajustes</span>
               </button>
               {settingsOpen ? (
@@ -684,6 +706,7 @@ function App() {
                   <div
                     className="settings-panel"
                     id="settings-panel"
+                    ref={settingsPanelRef}
                     role="dialog"
                     aria-modal="true"
                     aria-label="Ajustes de sincronización"
@@ -697,7 +720,7 @@ function App() {
                         type="button"
                         onClick={() => setSettingsOpen(false)}
                       >
-                        ×
+                        <Icon name="close" />
                       </button>
                     </div>
                     <div className="settings-panel-content">
@@ -720,7 +743,7 @@ function App() {
               type="button"
               onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
             >
-              <span aria-hidden="true">{theme === 'dark' ? '☾' : '☀'}</span>
+              <Icon name={theme === 'dark' ? 'moon' : 'sun'} />
               <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>
             </button>
             <button
@@ -732,8 +755,8 @@ function App() {
                 setIsCreatingTask(true)
               }}
             >
-              <span aria-hidden="true">+</span>
-              Nueva tarea
+              <Icon name="add" />
+              <span className="new-task-label">Nueva tarea</span>
             </button>
           </div>
         </header>
@@ -756,7 +779,6 @@ function App() {
             allTasks={visibleTasks}
             completedOnly={false}
             onComplete={handleComplete}
-            onDelete={handleDelete}
             onEdit={(task) => {
               setEditingTask(task)
               setIsCreatingTask(true)
@@ -777,7 +799,6 @@ function App() {
               setEditingTask(null)
               setIsCreatingTask(true)
             }}
-            onDelete={handleDelete}
             onEdit={(task) => {
               setEditingTask(task)
               setIsCreatingTask(true)
@@ -799,7 +820,6 @@ function App() {
               setEditingTask(null)
               setIsCreatingTask(true)
             }}
-            onDelete={handleDelete}
             onEdit={(task) => {
               setEditingTask(task)
               setIsCreatingTask(true)
@@ -827,7 +847,6 @@ function App() {
               source: 'canvas',
               status: filters.status,
             })}
-            onHide={canvasState.hideTask}
             onOpen={(task) => setSelectedTaskId(task.id)}
             onReview={canvasState.markReviewed}
           />
@@ -846,6 +865,7 @@ function App() {
             setSelectedTaskId(null)
           }}
           onComplete={handleComplete}
+          onCreateList={listsState.createList}
           onDelete={handleDelete}
           onDeleteSeries={handleDeleteSeries}
           onEdit={(task) => {

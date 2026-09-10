@@ -39,3 +39,7 @@ export function readableColor(hex: string) {
 export function visibleOnLightColor(hex: string) {
   return colorLuminance(hex) > 0.82 ? '#111827' : hex
 }
+
+export function visibleOnDarkColor(hex: string) {
+  return colorLuminance(hex) < 0.12 ? '#ffffff' : hex
+}

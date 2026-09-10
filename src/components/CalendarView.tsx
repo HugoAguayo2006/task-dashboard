@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import type { CalendarMode, Task } from '../types/task'
-import { readableColor, visibleOnLightColor } from '../utils/colors'
+import { readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import {
   buildMonthDays,
   buildWeekDays,
@@ -10,6 +10,7 @@ import {
   todayISO,
   toISODate,
 } from '../utils/dates'
+import { Icon } from './Icon'
 
 type CalendarViewProps = {
   mode: CalendarMode
@@ -20,6 +21,13 @@ type CalendarViewProps = {
 }
 
 const weekLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const monthOptions = Array.from({ length: 12 }, (_, month) => {
+  const label = new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(new Date(2024, month, 1))
+  return {
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    value: month,
+  }
+})
 
 function sortCalendarTasks(tasks: Task[]) {
   return [...tasks].sort((a, b) => {
@@ -76,6 +84,14 @@ export function CalendarView({
 
   const days = mode === 'week' ? buildWeekDays(visibleDate) : buildMonthDays(visibleDate).days
   const currentMonth = visibleDate.getMonth()
+  const visibleYear = visibleDate.getFullYear()
+  const actualYear = new Date().getFullYear()
+  const firstSelectableYear = Math.min(actualYear - 100, visibleYear - 20)
+  const lastSelectableYear = Math.max(actualYear + 100, visibleYear + 20)
+  const yearOptions = Array.from(
+    { length: lastSelectableYear - firstSelectableYear + 1 },
+    (_, index) => firstSelectableYear + index,
+  )
   const movePeriod = (offset: number) => {
     setExpandedDay(null)
     setVisibleDate((current) => {
@@ -87,18 +103,59 @@ export function CalendarView({
       return new Date(current.getFullYear(), current.getMonth() + offset, 1)
     })
   }
-  const title = mode === 'week' ? 'Semana' : monthTitle(visibleDate)
+  const jumpToMonth = (month: number) => {
+    setExpandedDay(null)
+    setVisibleDate((current) => new Date(current.getFullYear(), month, 1))
+  }
+  const jumpToYear = (year: number) => {
+    setExpandedDay(null)
+    setVisibleDate((current) => new Date(year, current.getMonth(), 1))
+  }
+  const title = monthTitle(visibleDate)
 
   return (
     <>
       <section className={`calendar-grid ${mode === 'week' ? 'week-mode' : ''}`}>
         <div className="calendar-title">
-          <button aria-label="Periodo anterior" type="button" onClick={() => movePeriod(-1)}>
-            ‹
+          <button
+            aria-label={mode === 'week' ? 'Semana anterior' : 'Mes anterior'}
+            className="calendar-period-button"
+            title={mode === 'week' ? 'Semana anterior' : 'Mes anterior'}
+            type="button"
+            onClick={() => movePeriod(-1)}
+          >
+            <Icon name="chevron-left" />
           </button>
-          <h2>{title}</h2>
-          <button aria-label="Periodo siguiente" type="button" onClick={() => movePeriod(1)}>
-            ›
+          <div className="calendar-date-picker" aria-label={`Periodo visible: ${title}`} role="group">
+            <select
+              aria-label="Seleccionar mes"
+              className="calendar-month-select"
+              value={currentMonth}
+              onChange={(event) => jumpToMonth(Number(event.target.value))}
+            >
+              {monthOptions.map((month) => (
+                <option key={month.value} value={month.value}>{month.label}</option>
+              ))}
+            </select>
+            <select
+              aria-label="Seleccionar año"
+              className="calendar-year-select"
+              value={visibleYear}
+              onChange={(event) => jumpToYear(Number(event.target.value))}
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            aria-label={mode === 'week' ? 'Semana siguiente' : 'Mes siguiente'}
+            className="calendar-period-button"
+            title={mode === 'week' ? 'Semana siguiente' : 'Mes siguiente'}
+            type="button"
+            onClick={() => movePeriod(1)}
+          >
+            <Icon name="chevron-right" />
           </button>
         </div>
         {weekLabels.map((label) => (
@@ -202,12 +259,13 @@ function CalendarTaskRow({
 }: CalendarTaskRowProps) {
   const overdue = isOverdue(task)
   const canDrag = task.source === 'manual'
-  const visibleColor = visibleOnLightColor(task.color)
+  const darkVisibleColor = visibleOnDarkColor(task.color)
+  const lightVisibleColor = visibleOnLightColor(task.color)
   const taskAccentStyle = {
-    '--task-color': task.color,
-    '--task-visible-color': visibleColor,
-    '--task-text-color': readableColor(task.color),
-    '--task-visible-text-color': readableColor(visibleColor),
+    '--task-dark-color': darkVisibleColor,
+    '--task-light-color': lightVisibleColor,
+    '--task-dark-text-color': readableColor(darkVisibleColor),
+    '--task-light-text-color': readableColor(lightVisibleColor),
   } as CSSProperties
 
   return (
@@ -284,7 +342,7 @@ function DayTasksPopover({
       aria-label="Tareas del día"
     >
       <button aria-label="Cerrar día" className="day-popover-close" type="button" onClick={onClose}>
-        ×
+        <Icon name="close" />
       </button>
       <header className="day-popover-header">
         <span>{weekday}</span>
