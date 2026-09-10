@@ -402,7 +402,7 @@ export function TaskModal({
             <h2>{task.title}</h2>
             <p className="task-description">{task.description || 'Sin descripción adicional.'}</p>
             <dl>
-              <div>
+              <div className="details-summary-row">
                 <dt>Fecha</dt>
                 <dd>
                   {task.dueDate ? formatLongDate(task.dueDate) : 'Sin fecha'}

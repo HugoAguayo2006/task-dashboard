@@ -1045,6 +1045,7 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .details-panel > p { margin: -6px 0 0; color: var(--text-secondary); line-height: 1.5; }
 .details-panel dl { display: grid; margin: 0; overflow: visible; border: 1px solid var(--separator-soft); border-radius: var(--radius-lg); background: var(--surface-soft); }
 .details-panel dl > div { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--separator-soft); }
+.details-panel dl > .details-summary-row { align-items: center; }
 .details-panel dl > div:last-child { border-bottom: 0; }
 .details-panel dt { padding-block: 11px; color: var(--text-secondary); font-size: var(--font-footnote); }
 .details-panel dd { margin: 0; color: var(--text-strong); text-align: right; }
