@@ -1,4 +1,5 @@
 import type { TaskList } from './list'
+import type { AppNotification } from './notification'
 import type { Task } from './task'
 
 export type SyncTombstones = Record<string, string>
@@ -22,6 +23,7 @@ export type SyncState = {
   externalCalendarState?: ExternalCalendarSyncState
   listTombstones?: SyncTombstones
   lists: TaskList[]
+  notifications?: AppNotification[]
   taskTombstones?: SyncTombstones
   tasks: Task[]
   updatedAt: string

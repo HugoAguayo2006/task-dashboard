@@ -11,12 +11,16 @@ import { Icon } from './components/Icon'
 import { CalendarPage } from './pages/CalendarPage'
 import { CanvasPage } from './pages/CanvasPage'
 import { Dashboard } from './pages/Dashboard'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { TodayPage, type TodayFilters } from './pages/TodayPage'
 import { useCanvasTasks } from './hooks/useCanvasTasks'
 import { useExternalCalendarTasks } from './hooks/useExternalCalendarTasks'
 import { useLists } from './hooks/useLists'
+import { useNotifications } from './hooks/useNotifications'
 import { useTasks } from './hooks/useTasks'
+import { drainPushNotifications } from './services/notificationInboxService'
 import { fetchSyncState, saveSyncState, SyncConflictError } from './services/syncApi'
+import type { AppNotification } from './types/notification'
 import type { SyncState, SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters, TaskPriority } from './types/task'
 import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from './utils/dates'
@@ -43,15 +47,9 @@ const initialTodayFilters: TodayFilters = {
 
 type ThemeMode = 'dark' | 'light'
 
-type InAppNotification = {
-  title: string
-  body: string
-  tag: string
-  url: string
-}
-
 const THEME_STORAGE_KEY = 'app-theme'
 const SHOWN_IN_APP_REMINDERS_KEY = 'chalendar-shown-in-app-reminders'
+const NOTIFICATION_LOOKBACK_MS = 26 * 60 * 60_000
 
 function readSavedTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'dark'
@@ -61,8 +59,18 @@ function readSavedTheme(): ThemeMode {
 function readInitialView(): AppView {
   if (typeof window === 'undefined') return 'today'
   const requestedView = new URLSearchParams(window.location.search).get('view')
-  const availableViews: AppView[] = ['today', 'tomorrow', 'calendar', 'lists', 'canvas']
+  const availableViews: AppView[] = ['today', 'tomorrow', 'notifications', 'calendar', 'lists', 'canvas']
   return availableViews.includes(requestedView as AppView) ? requestedView as AppView : 'today'
+}
+
+function readShownReminderIds() {
+  try {
+    return new Set<string>(
+      JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
+    )
+  } catch {
+    return new Set<string>()
+  }
 }
 
 function App() {
@@ -80,7 +88,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading')
   const [theme, setTheme] = useState<ThemeMode>(readSavedTheme)
-  const [inAppNotifications, setInAppNotifications] = useState<InAppNotification[]>([])
+  const [inAppNotifications, setInAppNotifications] = useState<AppNotification[]>([])
   const syncReady = useRef(false)
   const syncDisabled = useRef(false)
   const didLoadCloudState = useRef(false)
@@ -99,6 +107,12 @@ function App() {
 
   const listsState = useLists()
   const tasksState = useTasks(listsState.lists)
+  const {
+    notifications: inboxNotifications,
+    addNotifications,
+    completeNotification,
+    replaceNotifications,
+  } = useNotifications()
   const canvasState = useCanvasTasks()
   const externalCalendarState = useExternalCalendarTasks(listsState.lists)
 
@@ -107,6 +121,7 @@ function App() {
     externalCalendarState: externalCalendarState.localState,
     listTombstones: listsState.listTombstones,
     lists: listsState.lists,
+    notifications: inboxNotifications,
     taskTombstones: tasksState.taskTombstones,
     tasks: tasksState.tasks,
   }
@@ -122,6 +137,9 @@ function App() {
       state.tasks,
       state.deletedSeedTaskIds ?? [],
       state.taskTombstones ?? {},
+    )
+    replaceNotifications(
+      state.notifications ?? inboxNotifications,
     )
     externalCalendarState.replaceLocalState(
       state.externalCalendarState ?? externalCalendarState.localState,
@@ -289,25 +307,48 @@ function App() {
   }, [settingsOpen])
 
   useEffect(() => {
+    let cancelled = false
+    drainPushNotifications()
+      .then((notifications) => {
+        if (!cancelled) addNotifications(notifications)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [addNotifications])
+
+  useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
-    const handlePushMessage = (event: MessageEvent<Partial<InAppNotification> & { type?: string }>) => {
+    const handlePushMessage = (event: MessageEvent<Partial<AppNotification> & {
+      type?: string
+      tag?: string
+      scheduledAt?: string
+    }>) => {
       if (event.data?.type !== 'CHALENDAR_PUSH') return
-      const notification = {
+      const id = event.data.id || event.data.tag || String(Date.now())
+      const createdAt = event.data.createdAt || event.data.scheduledAt || new Date().toISOString()
+      const notification: AppNotification = {
+        id,
         title: event.data.title || 'Chalendar',
         body: event.data.body || 'Tienes una tarea pendiente.',
-        tag: event.data.tag || String(Date.now()),
         url: event.data.url || '/',
+        taskId: event.data.taskId || id.split(':')[0],
+        createdAt,
+        updatedAt: event.data.updatedAt || createdAt,
+        completed: false,
       }
+      addNotifications([notification])
       setInAppNotifications((current) => [
-        ...current.filter((item) => item.tag !== notification.tag),
+        ...current.filter((item) => item.id !== notification.id),
         notification,
       ])
     }
 
     navigator.serviceWorker.addEventListener('message', handlePushMessage)
     return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage)
-  }, [])
+  }, [addNotifications])
 
   useLayoutEffect(() => {
     workspaceRef.current?.scrollTo({ left: 0, top: 0 })
@@ -339,6 +380,7 @@ function App() {
     externalCalendarState.localState,
     listsState.listTombstones,
     listsState.lists,
+    inboxNotifications,
     tasksState.deletedSeedTaskIds,
     tasksState.taskTombstones,
     tasksState.tasks,
@@ -357,6 +399,9 @@ function App() {
     const visibleListIds = new Set(visibleLists.map((list) => list.id))
     return allTasks.filter((task) => visibleListIds.has(task.listId))
   }, [allTasks, visibleLists])
+  const pendingNotificationCount = inboxNotifications.filter(
+    (notification) => !notification.completed,
+  ).length
 
   useEffect(() => {
     const hiddenListIds = new Set(listsState.lists.filter((list) => list.hidden).map((list) => list.id))
@@ -370,21 +415,27 @@ function App() {
     const checkDueTasks = () => {
       const now = Date.now()
       const recentWindow = now - 10 * 60_000
-      const shown = new Set<string>(
-        JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
-      )
-      const pendingReminders = allTasks.flatMap((task) => {
+      const inboxWindow = now - NOTIFICATION_LOOKBACK_MS
+      const shown = readShownReminderIds()
+      const dueReminders = allTasks.flatMap((task) => {
         if (task.completed || !task.dueDate) return []
-        const reminders: Array<{ id: string; title: string; scheduledAt: number }> = []
+        const reminders: Array<{
+          id: string
+          kind: 'high-morning' | 'high-evening' | 'one-day' | 'one-hour' | 'due-now'
+          title: string
+          scheduledAt: number
+        }> = []
         if (task.priority === 'high') {
           reminders.push(
             {
               id: `${task.id}:high-morning:${task.dueDate}`,
+              kind: 'high-morning',
               title: 'Prioridad alta para hoy',
               scheduledAt: new Date(`${task.dueDate}T08:00:00`).getTime(),
             },
             {
               id: `${task.id}:high-evening:${task.dueDate}`,
+              kind: 'high-evening',
               title: 'Recordatorio de prioridad alta',
               scheduledAt: new Date(`${task.dueDate}T17:00:00`).getTime(),
             },
@@ -393,33 +444,60 @@ function App() {
         if (task.dueTime) {
           const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()
           reminders.push(
-            { id: `${task.id}:one-day:${task.dueDate}T${task.dueTime}`, title: 'Vence en 1 día', scheduledAt: dueAt - 86_400_000 },
-            { id: `${task.id}:one-hour:${task.dueDate}T${task.dueTime}`, title: 'Vence en 1 hora', scheduledAt: dueAt - 3_600_000 },
-            { id: `${task.id}:due-now:${task.dueDate}T${task.dueTime}`, title: 'Tarea para ahora', scheduledAt: dueAt },
+            { id: `${task.id}:one-day:${task.dueDate}T${task.dueTime}`, kind: 'one-day', title: 'Vence en 1 día', scheduledAt: dueAt - 86_400_000 },
+            { id: `${task.id}:one-hour:${task.dueDate}T${task.dueTime}`, kind: 'one-hour', title: 'Vence en 1 hora', scheduledAt: dueAt - 3_600_000 },
+            { id: `${task.id}:due-now:${task.dueDate}T${task.dueTime}`, kind: 'due-now', title: 'Tarea para ahora', scheduledAt: dueAt },
           )
         }
-        return reminders.map((reminder) => ({ ...reminder, task }))
+        const changedAt = Date.parse(task.updatedAt || task.createdAt)
+        return reminders
+          .filter((reminder) =>
+            !Number.isFinite(changedAt) ||
+            reminder.kind === 'one-hour' ||
+            reminder.scheduledAt >= changedAt - 60_000,
+          )
+          .map((reminder) => ({ ...reminder, task }))
       })
         .filter((reminder) =>
           reminder.scheduledAt <= now &&
-          reminder.scheduledAt > recentWindow &&
-          !shown.has(reminder.id),
+          reminder.scheduledAt > inboxWindow,
         )
         .sort((first, second) => first.scheduledAt - second.scheduledAt)
 
+      addNotifications(dueReminders.map((reminder) => {
+        const createdAt = new Date(reminder.scheduledAt).toISOString()
+        return {
+          id: reminder.id,
+          title: reminder.title,
+          body: reminder.task.title,
+          url: '/?view=today',
+          taskId: reminder.task.id,
+          createdAt,
+          updatedAt: createdAt,
+          completed: false,
+        }
+      }))
+
+      const pendingReminders = dueReminders.filter((reminder) =>
+        reminder.scheduledAt > recentWindow && !shown.has(reminder.id),
+      )
       if (!pendingReminders.length) return
 
       pendingReminders.forEach((reminder) => shown.add(reminder.id))
       window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
       setInAppNotifications((current) => {
-        const nextTags = new Set(pendingReminders.map((reminder) => reminder.id))
+        const nextIds = new Set(pendingReminders.map((reminder) => reminder.id))
         return [
-          ...current.filter((item) => !nextTags.has(item.tag)),
+          ...current.filter((item) => !nextIds.has(item.id)),
           ...pendingReminders.map((reminder) => ({
+            id: reminder.id,
             title: reminder.title,
             body: reminder.task.title,
-            tag: reminder.id,
-            url: '/',
+            url: '/?view=today',
+            taskId: reminder.task.id,
+            createdAt: new Date(reminder.scheduledAt).toISOString(),
+            updatedAt: new Date(reminder.scheduledAt).toISOString(),
+            completed: false,
           })),
         ]
       })
@@ -428,7 +506,7 @@ function App() {
     checkDueTasks()
     const interval = window.setInterval(checkDueTasks, 10_000)
     return () => window.clearInterval(interval)
-  }, [allTasks])
+  }, [addNotifications, allTasks])
 
   const selectedTask = useMemo(
     () => allTasks.find((task) => task.id === selectedTaskId) ?? null,
@@ -560,16 +638,26 @@ function App() {
     )
     const showHighPriorityAlert = () => {
       if (priority !== 'high' || task.completed || task.dueDate !== todayISO()) return
-      const tag = `${task.id}:high-day:${task.dueDate}`
-      const shown = new Set<string>(
-        JSON.parse(window.localStorage.getItem(SHOWN_IN_APP_REMINDERS_KEY) || '[]') as string[],
-      )
-      if (shown.has(tag)) return
-      shown.add(tag)
+      const id = `${task.id}:high-day:${task.dueDate}`
+      const shown = readShownReminderIds()
+      if (shown.has(id)) return
+      shown.add(id)
       window.localStorage.setItem(SHOWN_IN_APP_REMINDERS_KEY, JSON.stringify([...shown].slice(-200)))
+      const createdAt = new Date().toISOString()
+      const notification: AppNotification = {
+        id,
+        title: 'Prioridad alta para hoy',
+        body: task.title,
+        url: '/?view=today',
+        taskId: task.id,
+        createdAt,
+        updatedAt: createdAt,
+        completed: false,
+      }
+      addNotifications([notification])
       setInAppNotifications((current) => [
-        ...current.filter((notification) => notification.tag !== tag),
-        { title: 'Prioridad alta para hoy', body: task.title, tag, url: '/?view=today' },
+        ...current.filter((item) => item.id !== id),
+        notification,
       ])
     }
 
@@ -593,19 +681,24 @@ function App() {
     return syncManualTasks(nextTasks)
   }
 
+  const handleCompleteNotification = (id: string) => {
+    completeNotification(id)
+    setInAppNotifications((current) => current.filter((notification) => notification.id !== id))
+  }
+
   return (
     <div className={`app-shell theme-${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {inAppNotifications.length ? (
         <section className="in-app-notification-stack" aria-label="Alertas pendientes" aria-live="assertive">
           {inAppNotifications.map((notification) => (
-            <aside className="in-app-notification" role="alert" key={notification.tag}>
+            <aside className="in-app-notification" role="alert" key={notification.id}>
               <button
                 className="in-app-notification-content"
                 type="button"
                 onClick={() => {
-                  setView('today')
+                  setView('notifications')
                   setSidebarOpen(false)
-                  setInAppNotifications((current) => current.filter((item) => item.tag !== notification.tag))
+                  setInAppNotifications((current) => current.filter((item) => item.id !== notification.id))
                   window.scrollTo({ left: 0, top: 0 })
                 }}
               >
@@ -619,7 +712,7 @@ function App() {
                 aria-label={`Cerrar alerta: ${notification.body}`}
                 className="in-app-notification-close"
                 type="button"
-                onClick={() => setInAppNotifications((current) => current.filter((item) => item.tag !== notification.tag))}
+                onClick={() => setInAppNotifications((current) => current.filter((item) => item.id !== notification.id))}
               >
                 <Icon name="close" />
               </button>
@@ -631,6 +724,7 @@ function App() {
         activeView={view}
         collapsed={sidebarCollapsed}
         lists={listsState.lists}
+        notificationCount={pendingNotificationCount}
         open={sidebarOpen}
         tasks={allTasks}
         onCreateList={listsState.createList}
@@ -673,6 +767,8 @@ function App() {
                   ? 'Calendario'
                   : view === 'canvas'
                     ? 'Canvas'
+                    : view === 'notifications'
+                      ? 'Notificaciones'
                     : view === 'today'
                       ? 'Hoy'
                       : view === 'tomorrow'
@@ -758,7 +854,7 @@ function App() {
           </div>
         </header>
 
-        {view !== 'today' && view !== 'tomorrow' ? (
+        {view !== 'today' && view !== 'tomorrow' && view !== 'notifications' ? (
           <FiltersBar
             calendarMode={calendarMode}
             filters={filters}
@@ -833,6 +929,16 @@ function App() {
             onComplete={handleComplete}
             onMoveTask={handleMoveTask}
             onOpenTask={(task) => setSelectedTaskId(task.id)}
+          />
+        ) : null}
+
+        {view === 'notifications' ? (
+          <NotificationsPage
+            notifications={inboxNotifications}
+            onComplete={handleCompleteNotification}
+            onOpenTask={(taskId) => {
+              if (allTasks.some((task) => task.id === taskId)) setSelectedTaskId(taskId)
+            }}
           />
         ) : null}
 

@@ -9,6 +9,7 @@ type SidebarProps = {
   activeView: AppView
   collapsed: boolean
   lists: TaskList[]
+  notificationCount: number
   open: boolean
   tasks: Task[]
   onCreateList: (name: string, color: string) => void
@@ -26,6 +27,7 @@ const navItems: Array<{ id: AppView; label: string; icon: IconName }> = [
   { id: 'lists', label: 'Listas', icon: 'list' },
   { id: 'today', label: 'Hoy', icon: 'today' },
   { id: 'tomorrow', label: 'Mañana', icon: 'tomorrow' },
+  { id: 'notifications', label: 'Notificaciones', icon: 'bell' },
   { id: 'calendar', label: 'Calendario', icon: 'calendar' },
   { id: 'canvas', label: 'Canvas', icon: 'canvas' },
 ]
@@ -34,6 +36,7 @@ export function Sidebar({
   activeView,
   collapsed,
   lists,
+  notificationCount,
   open,
   tasks,
   onCreateList,
@@ -80,6 +83,9 @@ export function Sidebar({
         <nav className="nav-list" aria-label="Navegación principal">
           {navItems.map((item) => (
             <button
+              aria-label={item.id === 'notifications' && notificationCount
+                ? `${item.label}, ${notificationCount} pendientes`
+                : item.label}
               aria-current={activeView === item.id ? 'page' : undefined}
               className={activeView === item.id ? 'active' : ''}
               key={item.id}
@@ -88,6 +94,11 @@ export function Sidebar({
             >
               <Icon name={item.icon} />
               <span className="sidebar-label">{item.label}</span>
+              {item.id === 'notifications' && notificationCount > 0 ? (
+                <span className="notification-count" aria-hidden="true">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              ) : null}
             </button>
           ))}
         </nav>

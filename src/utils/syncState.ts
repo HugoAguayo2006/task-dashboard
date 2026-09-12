@@ -1,4 +1,5 @@
 import type { TaskList } from '../types/list'
+import type { AppNotification } from '../types/notification'
 import type {
   ExternalCalendarEntryState,
   ExternalCalendarSyncState,
@@ -186,6 +187,27 @@ function mergeTasks(local: Task[], remote: Task[], tombstones: SyncTombstones) {
   return mergeEntities(local, remote, tombstones)
 }
 
+function mergeNotifications(local: AppNotification[], remote: AppNotification[]) {
+  const merged = new Map<string, AppNotification>()
+
+  for (const notification of [...remote, ...local]) {
+    const current = merged.get(notification.id)
+    if (!current) {
+      merged.set(notification.id, notification)
+      continue
+    }
+    if (current.completed !== notification.completed) {
+      merged.set(notification.id, current.completed ? current : notification)
+      continue
+    }
+    if (timestamp(notification.updatedAt) > timestamp(current.updatedAt)) {
+      merged.set(notification.id, notification)
+    }
+  }
+
+  return [...merged.values()]
+}
+
 export function mergeSyncStates(local: SyncState, remote: SyncState): SyncState {
   const taskTombstones = mergeTombstones(local.taskTombstones, remote.taskTombstones)
   const listTombstones = mergeTombstones(local.listTombstones, remote.listTombstones)
@@ -204,6 +226,7 @@ export function mergeSyncStates(local: SyncState, remote: SyncState): SyncState 
     ),
     listTombstones,
     lists: mergeLists(local.lists, remote.lists, listTombstones),
+    notifications: mergeNotifications(local.notifications ?? [], remote.notifications ?? []),
     taskTombstones,
     tasks: mergeTasks(local.tasks, remote.tasks, taskTombstones)
       .filter((task) => !deletedSeedTaskIds.includes(task.id)),
@@ -234,6 +257,11 @@ export function latestWorkspaceTimestamp(state: Omit<SyncState, 'updatedAt'>) {
   return latestTimestamp(
     ...state.tasks.flatMap((task) => [task.createdAt, task.updatedAt]),
     ...state.lists.flatMap((list) => [list.createdAt, list.updatedAt]),
+    ...(state.notifications ?? []).flatMap((notification) => [
+      notification.createdAt,
+      notification.updatedAt,
+      notification.completedAt,
+    ]),
     ...Object.values(state.taskTombstones ?? {}),
     ...Object.values(state.listTombstones ?? {}),
     state.externalCalendarState?.updatedAt,

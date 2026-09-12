@@ -2,6 +2,7 @@ import type { ReactNode, SVGProps } from 'react'
 
 export type IconName =
   | 'add'
+  | 'bell'
   | 'calendar'
   | 'canvas'
   | 'check'
@@ -31,6 +32,7 @@ type IconProps = SVGProps<SVGSVGElement> & {
 export function Icon({ name, size = 20, ...props }: IconProps) {
   const paths: Record<IconName, ReactNode> = {
     add: <path d="M12 5v14M5 12h14" />,
+    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" /><path d="M10 21h4" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" /></>,
     canvas: <><path d="m12 3 8 5-8 5-8-5 8-5Z" /><path d="m4 12 8 5 8-5M4 16l8 5 8-5" /></>,
     check: <path d="m6 12 4 4 8-9" />,

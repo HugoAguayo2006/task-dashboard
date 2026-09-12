@@ -15,6 +15,7 @@ type Task = {
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
 type Reminder = {
   id: string
+  inboxId: string
   kind: 'high-morning' | 'high-evening' | 'one-day' | 'one-hour' | 'due-now'
   task: Task
   scheduledAt: Date
@@ -54,8 +55,8 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
     const morningAt = zonedDate(task.dueDate, '08:00', timezone)
     const eveningAt = zonedDate(task.dueDate, '17:00', timezone)
     reminders.push(
-      { id: `${task.id}:high-morning:${morningAt.toISOString()}`, kind: 'high-morning', task, scheduledAt: morningAt, label: 'Prioridad alta para hoy' },
-      { id: `${task.id}:high-evening:${eveningAt.toISOString()}`, kind: 'high-evening', task, scheduledAt: eveningAt, label: 'Recordatorio de prioridad alta' },
+      { id: `${task.id}:high-morning:${morningAt.toISOString()}`, inboxId: `${task.id}:high-morning:${task.dueDate}`, kind: 'high-morning', task, scheduledAt: morningAt, label: 'Prioridad alta para hoy' },
+      { id: `${task.id}:high-evening:${eveningAt.toISOString()}`, inboxId: `${task.id}:high-evening:${task.dueDate}`, kind: 'high-evening', task, scheduledAt: eveningAt, label: 'Recordatorio de prioridad alta' },
     )
   }
   if (task.dueTime) {
@@ -66,7 +67,14 @@ function remindersForTask(task: Task, timezone: string): Reminder[] {
       ['due-now', 0, 'Tarea para ahora'],
     ] as const) {
       const scheduledAt = new Date(dueAt.getTime() - milliseconds)
-      reminders.push({ id: `${task.id}:${kind}:${scheduledAt.toISOString()}`, kind, task, scheduledAt, label })
+      reminders.push({
+        id: `${task.id}:${kind}:${scheduledAt.toISOString()}`,
+        inboxId: `${task.id}:${kind}:${task.dueDate}T${task.dueTime}`,
+        kind,
+        task,
+        scheduledAt,
+        label,
+      })
     }
   }
   // No recuperamos avisos cuya hora ya habia pasado cuando la tarea se creo o edito.
@@ -138,10 +146,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
           endpoint: subscription.endpoint,
           keys: { p256dh: subscription.p256dh, auth: subscription.auth },
         }, JSON.stringify({
+          id: reminder.inboxId,
           title: reminder.label,
           body: reminder.task.title,
-          tag: reminder.id,
+          tag: reminder.inboxId,
           url: '/?view=today',
+          taskId: reminder.task.id,
+          scheduledAt: reminder.scheduledAt.toISOString(),
         }), reminder.kind === 'one-hour'
           ? {
               // Apple puede diferir los pushes con urgencia normal. Este aviso

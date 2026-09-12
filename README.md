@@ -167,6 +167,7 @@ Chalendar desde el nuevo icono y toca **Activar notificaciones**.
 - Dashboard con tareas próximas, vencidas, manuales, Canvas y resumen por lista.
 - Listas/clases con color configurable guardado en `localStorage`.
 - Tareas manuales con fecha, hora, prioridad, etiquetas, edición, borrado y completado.
+- Bandeja de notificaciones persistente y sincronizada, con avisos pendientes hasta completarlos.
 - Vista calendario mensual, semanal y agenda.
 - Filtros por lista, fuente, estado, prioridad, texto, vencidas y completadas.
 - Tareas de Canvas mezcladas con las manuales, con opción local para revisar u ocultar.

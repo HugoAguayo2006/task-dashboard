@@ -28,6 +28,7 @@ type SyncState = {
   }
   listTombstones?: Record<string, string>
   lists: unknown[]
+  notifications?: unknown[]
   taskTombstones?: Record<string, string>
   tasks: unknown[]
   updatedAt: string
@@ -64,6 +65,7 @@ function isSyncState(value: unknown): value is SyncState {
   return (
     Array.isArray(state.lists) &&
     Array.isArray(state.tasks) &&
+    (state.notifications === undefined || Array.isArray(state.notifications)) &&
     typeof state.updatedAt === 'string' &&
     hasDeletedSeedTaskIds &&
     hasExternalCalendarState &&
