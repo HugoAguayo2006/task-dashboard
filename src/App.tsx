@@ -606,39 +606,43 @@ function App() {
     })
   }
 
-  const handleSaveTaskDate = async (task: Task, dueDate: string, dueTime: string) => {
-    if (task.source !== 'manual' || (task.dueDate === dueDate && (task.dueTime ?? '') === dueTime)) {
+  const handleSaveTaskDetails = async (
+    task: Task,
+    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority },
+  ) => {
+    if (
+      task.source !== 'manual' ||
+      (task.dueDate === details.dueDate &&
+        (task.dueTime ?? '') === details.dueTime &&
+        task.listId === details.listId &&
+        task.priority === details.priority)
+    ) {
       return syncDisabled.current ? 'local' : 'synced'
     }
 
     const timestamp = new Date().toISOString()
+    const color = listsState.lists.find((list) => list.id === details.listId)?.color ?? task.color
     const nextTasks = tasksState.tasks.map((currentTask) =>
       currentTask.id === task.id
         ? {
             ...currentTask,
-            dueDate,
-            dueTime,
+            dueDate: details.dueDate,
+            dueTime: details.dueTime,
+            listId: details.listId,
+            color,
+            priority: details.priority,
             updatedAt: timestamp,
           }
         : currentTask,
     )
-    return syncManualTasks(nextTasks)
-  }
-
-  const handleSaveTaskPriority = async (task: Task, priority: TaskPriority) => {
-    if (task.source !== 'manual' || task.priority === priority) {
-      return syncDisabled.current ? 'local' : 'synced'
-    }
-
-    const timestamp = new Date().toISOString()
-    const nextTasks = tasksState.tasks.map((currentTask) =>
-      currentTask.id === task.id
-        ? { ...currentTask, priority, updatedAt: timestamp }
-        : currentTask,
-    )
     const showHighPriorityAlert = () => {
-      if (priority !== 'high' || task.completed || task.dueDate !== todayISO()) return
-      const id = `${task.id}:high-day:${task.dueDate}`
+      if (
+        task.priority === details.priority ||
+        details.priority !== 'high' ||
+        task.completed ||
+        details.dueDate !== todayISO()
+      ) return
+      const id = `${task.id}:high-day:${details.dueDate}`
       const shown = readShownReminderIds()
       if (shown.has(id)) return
       shown.add(id)
@@ -664,21 +668,6 @@ function App() {
     const result = await syncManualTasks(nextTasks)
     showHighPriorityAlert()
     return result
-  }
-
-  const handleSaveTaskList = async (task: Task, listId: string) => {
-    if (task.source !== 'manual' || task.listId === listId) {
-      return syncDisabled.current ? 'local' : 'synced'
-    }
-
-    const timestamp = new Date().toISOString()
-    const color = listsState.lists.find((list) => list.id === listId)?.color ?? task.color
-    const nextTasks = tasksState.tasks.map((currentTask) =>
-      currentTask.id === task.id
-        ? { ...currentTask, listId, color, updatedAt: timestamp }
-        : currentTask,
-    )
-    return syncManualTasks(nextTasks)
   }
 
   const handleCompleteNotification = (id: string) => {
@@ -976,9 +965,7 @@ function App() {
             setEditingTask(task)
             setIsCreatingTask(true)
           }}
-          onSaveTaskList={handleSaveTaskList}
-          onSaveTaskPriority={handleSaveTaskPriority}
-          onSaveTaskDate={handleSaveTaskDate}
+          onSaveTaskDetails={handleSaveTaskDetails}
           onSave={(payload) => {
             if (editingTask) {
               tasksState.updateTask(editingTask.id, payload)

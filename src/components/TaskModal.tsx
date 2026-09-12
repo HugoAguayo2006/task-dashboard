@@ -6,8 +6,8 @@ import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISO
 import { Icon } from './Icon'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
-type DateSaveResult = 'synced' | 'local'
-type DateSaveStatus = 'idle' | 'saving' | DateSaveResult | 'error'
+type DetailSaveResult = 'synced' | 'local'
+type DetailSaveStatus = 'idle' | 'saving' | DetailSaveResult | 'error'
 
 type TaskModalProps = {
   defaultDueDate?: string
@@ -20,9 +20,10 @@ type TaskModalProps = {
   onDelete: (task: Task) => void
   onDeleteSeries: (task: Task) => void
   onEdit: (task: Task) => void
-  onSaveTaskList: (task: Task, listId: string) => Promise<DateSaveResult>
-  onSaveTaskPriority: (task: Task, priority: TaskPriority) => Promise<DateSaveResult>
-  onSaveTaskDate: (task: Task, dueDate: string, dueTime: string) => Promise<DateSaveResult>
+  onSaveTaskDetails: (
+    task: Task,
+    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority },
+  ) => Promise<DetailSaveResult>
   onSave: (draft: TaskDraft) => void
 }
 
@@ -141,9 +142,7 @@ export function TaskModal({
   onDelete,
   onDeleteSeries,
   onEdit,
-  onSaveTaskList,
-  onSaveTaskPriority,
-  onSaveTaskDate,
+  onSaveTaskDetails,
   onSave,
 }: TaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(emptyDraft)
@@ -161,12 +160,17 @@ export function TaskModal({
   const [detailPriority, setDetailPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
   const [detailListId, setDetailListId] = useState(task?.listId ?? '')
   const [showDetailTimePicker, setShowDetailTimePicker] = useState(false)
-  const [dateSaveStatus, setDateSaveStatus] = useState<DateSaveStatus>('idle')
-  const [prioritySaveStatus, setPrioritySaveStatus] = useState<DateSaveStatus>('idle')
-  const [listSaveStatus, setListSaveStatus] = useState<DateSaveStatus>('idle')
+  const [detailSaveStatus, setDetailSaveStatus] = useState<DetailSaveStatus>('idle')
   const initializedFormContext = useRef<string | null>(null)
   const modalRef = useRef<HTMLElement | null>(null)
-  const isSavingDetail = dateSaveStatus === 'saving' || prioritySaveStatus === 'saving' || listSaveStatus === 'saving'
+  const hasDetailChanges = Boolean(
+    task?.source === 'manual' &&
+    (detailDueDate !== task.dueDate ||
+      detailDueTime !== (task.dueTime ?? '') ||
+      detailListId !== task.listId ||
+      detailPriority !== task.priority),
+  )
+  const isSavingDetail = detailSaveStatus === 'saving'
 
   useEffect(() => {
     const defaultListId =
@@ -206,9 +210,7 @@ export function TaskModal({
   }, [defaultDueDate, lists, task])
 
   useEffect(() => {
-    setDateSaveStatus('idle')
-    setPrioritySaveStatus('idle')
-    setListSaveStatus('idle')
+    setDetailSaveStatus('idle')
   }, [task?.id])
 
   useEffect(() => {
@@ -270,17 +272,7 @@ export function TaskModal({
   }
   const changeTaskDate = (dueDate: string) => {
     setDetailDueDate(dueDate)
-    setDateSaveStatus('idle')
-  }
-  const saveTaskDate = async () => {
-    if (!task || task.source !== 'manual' || detailDueDate === task.dueDate) return
-    setDateSaveStatus('saving')
-    try {
-      const result = await onSaveTaskDate(task, detailDueDate, task.dueTime ?? '')
-      setDateSaveStatus(result)
-    } catch {
-      setDateSaveStatus('error')
-    }
+    setDetailSaveStatus('idle')
   }
   const selectedTime = timeParts(draft.dueTime || '09:00')
   const selectedDetailTime = timeParts(detailDueTime || '09:00')
@@ -298,36 +290,22 @@ export function TaskModal({
   const changeDetailTimePart = (part: 'hour' | 'minute' | 'period', value: string) => {
     const next = { ...selectedDetailTime, [part]: value }
     setDetailDueTime(timeFromParts(next.hour, next.minute, next.period))
+    setDetailSaveStatus('idle')
   }
-  const saveTaskTime = async () => {
-    if (!task || task.source !== 'manual' || detailDueTime === (task.dueTime ?? '')) return
-    setDateSaveStatus('saving')
+  const saveTaskDetails = async () => {
+    if (!task || task.source !== 'manual' || !detailListId || !hasDetailChanges) return
+    setDetailSaveStatus('saving')
     try {
-      const result = await onSaveTaskDate(task, task.dueDate, detailDueTime)
+      const result = await onSaveTaskDetails(task, {
+        dueDate: detailDueDate,
+        dueTime: detailDueTime,
+        listId: detailListId,
+        priority: detailPriority,
+      })
       setShowDetailTimePicker(false)
-      setDateSaveStatus(result)
+      setDetailSaveStatus(result)
     } catch {
-      setDateSaveStatus('error')
-    }
-  }
-  const saveTaskPriority = async () => {
-    if (!task || task.source !== 'manual' || detailPriority === task.priority) return
-    setPrioritySaveStatus('saving')
-    try {
-      const result = await onSaveTaskPriority(task, detailPriority)
-      setPrioritySaveStatus(result)
-    } catch {
-      setPrioritySaveStatus('error')
-    }
-  }
-  const saveTaskList = async () => {
-    if (!task || task.source !== 'manual' || !detailListId || detailListId === task.listId) return
-    setListSaveStatus('saving')
-    try {
-      const result = await onSaveTaskList(task, detailListId)
-      setListSaveStatus(result)
-    } catch {
-      setListSaveStatus('error')
+      setDetailSaveStatus('error')
     }
   }
   const changeRepeatPreset = (preset: RepeatPreset) => {
@@ -415,7 +393,7 @@ export function TaskModal({
                   <dd>
                     <input
                       aria-label="Cambiar fecha de la tarea"
-                      disabled={dateSaveStatus === 'saving'}
+                      disabled={isSavingDetail}
                       type="date"
                       value={detailDueDate}
                       onChange={(event) => changeTaskDate(event.target.value)}
@@ -423,7 +401,7 @@ export function TaskModal({
                     <div className="details-date-shortcuts">
                       <button
                         className={detailDueDate === todayISO() ? 'active' : ''}
-                        disabled={dateSaveStatus === 'saving'}
+                        disabled={isSavingDetail}
                         type="button"
                         onClick={() => changeTaskDate(todayISO())}
                       >
@@ -431,7 +409,7 @@ export function TaskModal({
                       </button>
                       <button
                         className={detailDueDate === addDaysISO(1) ? 'active' : ''}
-                        disabled={dateSaveStatus === 'saving'}
+                        disabled={isSavingDetail}
                         type="button"
                         onClick={() => changeTaskDate(addDaysISO(1))}
                       >
@@ -439,36 +417,13 @@ export function TaskModal({
                       </button>
                       <button
                         className={!detailDueDate ? 'active' : ''}
-                        disabled={dateSaveStatus === 'saving'}
+                        disabled={isSavingDetail}
                         type="button"
                         onClick={() => changeTaskDate('')}
                       >
                         Sin fecha
                       </button>
                     </div>
-                    <button
-                      className="save-date-button"
-                      disabled={dateSaveStatus === 'saving' || detailDueDate === task.dueDate}
-                      type="button"
-                      onClick={saveTaskDate}
-                    >
-                      {dateSaveStatus === 'saving'
-                        ? 'Guardando...'
-                        : detailDueDate
-                          ? 'Guardar fecha'
-                          : 'Quitar fecha'}
-                    </button>
-                    {dateSaveStatus !== 'idle' ? (
-                      <p className={`date-save-message ${dateSaveStatus}`}>
-                        {dateSaveStatus === 'saving'
-                          ? 'Sincronizando con la nube...'
-                          : dateSaveStatus === 'synced'
-                            ? 'Sincronizado en la nube.'
-                            : dateSaveStatus === 'local'
-                              ? 'Guardado localmente. La nube no está disponible.'
-                              : 'No se pudo guardar. Intenta de nuevo.'}
-                      </p>
-                    ) : null}
                   </dd>
                 </div>
               ) : null}
@@ -480,10 +435,13 @@ export function TaskModal({
                       <button
                         aria-expanded={showDetailTimePicker}
                         className="time-picker-trigger"
-                        disabled={dateSaveStatus === 'saving'}
+                        disabled={isSavingDetail}
                         type="button"
                         onClick={() => {
-                          if (!detailDueTime) setDetailDueTime('09:00')
+                          if (!detailDueTime) {
+                            setDetailDueTime('09:00')
+                            setDetailSaveStatus('idle')
+                          }
                           setShowDetailTimePicker((open) => !open)
                         }}
                       >
@@ -503,24 +461,12 @@ export function TaskModal({
                             <TimeWheelColumn label="Periodo" options={wheelPeriods} value={selectedDetailTime.period} onChange={(value) => changeDetailTimePart('period', value)} />
                           </div>
                           <div className="time-wheel-actions">
-                            <button type="button" onClick={() => { setDetailDueTime(''); setShowDetailTimePicker(false) }}>Sin hora</button>
+                            <button type="button" onClick={() => { setDetailDueTime(''); setDetailSaveStatus('idle'); setShowDetailTimePicker(false) }}>Sin hora</button>
                             <button className="primary" type="button" onClick={() => setShowDetailTimePicker(false)}>Listo</button>
                           </div>
                         </div>
                       ) : null}
                     </div>
-                    <button
-                      className="save-date-button"
-                      disabled={dateSaveStatus === 'saving' || detailDueTime === (task.dueTime ?? '')}
-                      type="button"
-                      onClick={saveTaskTime}
-                    >
-                      {dateSaveStatus === 'saving'
-                        ? 'Guardando...'
-                        : detailDueTime
-                          ? 'Guardar hora'
-                          : 'Quitar hora'}
-                    </button>
                   </dd>
                 </div>
               ) : null}
@@ -530,36 +476,17 @@ export function TaskModal({
                   <dd>
                     <select
                       aria-label="Cambiar lista de la tarea"
-                      disabled={listSaveStatus === 'saving'}
+                      disabled={isSavingDetail}
                       value={detailListId}
                       onChange={(event) => {
                         setDetailListId(event.target.value)
-                        setListSaveStatus('idle')
+                        setDetailSaveStatus('idle')
                       }}
                     >
                       {lists.map((list) => (
                         <option key={list.id} value={list.id}>{list.name}</option>
                       ))}
                     </select>
-                    <button
-                      className="save-date-button"
-                      disabled={listSaveStatus === 'saving' || !detailListId || detailListId === task.listId}
-                      type="button"
-                      onClick={saveTaskList}
-                    >
-                      {listSaveStatus === 'saving' ? 'Guardando...' : 'Guardar lista'}
-                    </button>
-                    {listSaveStatus !== 'idle' ? (
-                      <p className={`date-save-message ${listSaveStatus}`}>
-                        {listSaveStatus === 'saving'
-                          ? 'Sincronizando con la nube...'
-                          : listSaveStatus === 'synced'
-                            ? 'Lista sincronizada en la nube.'
-                            : listSaveStatus === 'local'
-                              ? 'Lista guardada localmente.'
-                              : 'No se pudo guardar. Intenta de nuevo.'}
-                      </p>
-                    ) : null}
                   </dd>
                 </div>
               ) : null}
@@ -576,12 +503,12 @@ export function TaskModal({
                         <button
                           aria-pressed={detailPriority === priority}
                           className={`priority-option priority-option-${priority} ${detailPriority === priority ? 'active' : ''}`}
-                          disabled={prioritySaveStatus === 'saving'}
+                          disabled={isSavingDetail}
                           key={priority}
                           type="button"
                           onClick={() => {
                             setDetailPriority(priority)
-                            setPrioritySaveStatus('idle')
+                            setDetailSaveStatus('idle')
                           }}
                         >
                           <span aria-hidden="true" />
@@ -589,25 +516,6 @@ export function TaskModal({
                         </button>
                       ))}
                     </div>
-                    <button
-                      className="save-date-button"
-                      disabled={prioritySaveStatus === 'saving' || detailPriority === task.priority}
-                      type="button"
-                      onClick={saveTaskPriority}
-                    >
-                      {prioritySaveStatus === 'saving' ? 'Guardando...' : 'Guardar prioridad'}
-                    </button>
-                    {prioritySaveStatus !== 'idle' ? (
-                      <p className={`date-save-message ${prioritySaveStatus}`}>
-                        {prioritySaveStatus === 'saving'
-                          ? 'Sincronizando con la nube...'
-                          : prioritySaveStatus === 'synced'
-                            ? 'Prioridad sincronizada en la nube.'
-                            : prioritySaveStatus === 'local'
-                              ? 'Prioridad guardada localmente.'
-                              : 'No se pudo guardar. Intenta de nuevo.'}
-                      </p>
-                    ) : null}
                   </dd>
                 </div>
               ) : (
@@ -637,24 +545,45 @@ export function TaskModal({
                 {task.source === 'canvas' ? 'Abrir en Canvas' : 'Abrir evento'}
               </a>
             ) : null}
+            {task.source === 'manual' && detailSaveStatus !== 'idle' ? (
+              <p className={`date-save-message ${detailSaveStatus}`} aria-live="polite">
+                {detailSaveStatus === 'saving'
+                  ? 'Sincronizando los cambios con la nube...'
+                  : detailSaveStatus === 'synced'
+                    ? 'Cambios sincronizados en la nube.'
+                    : detailSaveStatus === 'local'
+                      ? 'Cambios guardados localmente. La nube no está disponible.'
+                      : 'No se pudieron guardar los cambios. Intenta de nuevo.'}
+              </p>
+            ) : null}
             <div className="modal-actions">
               {task.source === 'manual' ? (
-                <button className="edit-button" type="button" onClick={() => onEdit(task)}>
+                <button className="edit-button" disabled={isSavingDetail} type="button" onClick={() => onEdit(task)}>
                   Editar título o descripción
                 </button>
               ) : null}
-              <button className="state-button" type="button" onClick={() => onComplete(task)}>
+              <button className="state-button" disabled={isSavingDetail} type="button" onClick={() => onComplete(task)}>
                 {task.source === 'manual'
                   ? 'Cambiar estado'
                   : task.completed
                     ? 'Marcar pendiente'
                     : 'Marcar revisada'}
               </button>
-              <button className="danger-button" type="button" onClick={() => onDelete(task)}>
+              {task.source === 'manual' ? (
+                <button
+                  className="primary-button save-details-button"
+                  disabled={isSavingDetail || !detailListId || !hasDetailChanges}
+                  type="button"
+                  onClick={saveTaskDetails}
+                >
+                  {isSavingDetail ? 'Guardando...' : 'Guardar'}
+                </button>
+              ) : null}
+              <button className="danger-button" disabled={isSavingDetail} type="button" onClick={() => onDelete(task)}>
                 {task.source === 'manual' ? 'Eliminar' : 'Ocultar'}
               </button>
               {task.source === 'manual' && task.recurrenceId ? (
-                <button className="danger-outline-button" type="button" onClick={() => onDeleteSeries(task)}>
+                <button className="danger-outline-button" disabled={isSavingDetail} type="button" onClick={() => onDeleteSeries(task)}>
                   Eliminar para siempre
                 </button>
               ) : null}

@@ -167,8 +167,7 @@
 
 .primary-button,
 .create-button,
-.canvas-link,
-.save-date-button {
+.canvas-link {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -186,8 +185,7 @@
 
 .primary-button:hover,
 .create-button:hover,
-.canvas-link:hover,
-.save-date-button:hover:not(:disabled) {
+.canvas-link:hover {
   background: var(--blue-hover);
 }
 
@@ -1231,7 +1229,6 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .details-panel dd { margin: 0; color: var(--text-strong); text-align: right; }
 .details-date-control dd { width: min(100%, 300px); display: grid; justify-items: stretch; gap: var(--space-2); }
 .details-date-shortcuts { justify-content: flex-end; }
-.save-date-button { width: 100%; min-height: 44px; border-radius: var(--radius-sm); box-shadow: none; }
 .date-save-message { margin: 0; color: var(--text-secondary); font-size: var(--font-caption); text-align: right; }
 .date-save-message.synced { color: var(--green); }
 .date-save-message.error { color: var(--red); }
