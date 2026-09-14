@@ -738,7 +738,7 @@ function App() {
       />
 
       <main className="workspace" ref={workspaceRef}>
-        <header className="topbar">
+        <header className={`topbar${settingsOpen ? ' settings-open' : ''}`}>
           <div className="topbar-main">
             <button
               aria-label="Abrir navegación"
