@@ -150,7 +150,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
           title: reminder.label,
           body: reminder.task.title,
           tag: reminder.inboxId,
-          url: '/?view=today',
+          url: '/hoy',
           taskId: reminder.task.id,
           scheduledAt: reminder.scheduledAt.toISOString(),
         }), reminder.kind === 'one-hour'

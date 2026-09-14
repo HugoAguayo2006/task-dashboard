@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
 import { ExternalCalendarStatus } from './components/ExternalCalendarStatus'
@@ -56,11 +57,25 @@ function readSavedTheme(): ThemeMode {
   return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
 }
 
-function readInitialView(): AppView {
-  if (typeof window === 'undefined') return 'today'
-  const requestedView = new URLSearchParams(window.location.search).get('view')
-  const availableViews: AppView[] = ['today', 'tomorrow', 'notifications', 'calendar', 'lists', 'canvas']
-  return availableViews.includes(requestedView as AppView) ? requestedView as AppView : 'today'
+const viewPaths: Record<AppView, string> = {
+  lists: '/listas',
+  today: '/hoy',
+  tomorrow: '/manana',
+  notifications: '/notificaciones',
+  calendar: '/calendario',
+  canvas: '/canvas',
+}
+
+const pathViews = Object.fromEntries(
+  Object.entries(viewPaths).map(([view, path]) => [path, view]),
+) as Record<string, AppView>
+
+function LegacyViewRedirect() {
+  const { search } = useLocation()
+  const requestedView = new URLSearchParams(search).get('view')
+  const availableViews = Object.keys(viewPaths) as AppView[]
+  const view = availableViews.includes(requestedView as AppView) ? requestedView as AppView : 'today'
+  return <Navigate replace to={viewPaths[view]} />
 }
 
 function readShownReminderIds() {
@@ -74,7 +89,9 @@ function readShownReminderIds() {
 }
 
 function App() {
-  const [view, setView] = useState<AppView>(readInitialView)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const view = pathViews[location.pathname] ?? 'today'
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
   const [filters, setFilters] = useState<TaskFilters>(initialFilters)
   const [todayFilters, setTodayFilters] = useState<TodayFilters>(initialTodayFilters)
@@ -470,7 +487,7 @@ function App() {
           id: reminder.id,
           title: reminder.title,
           body: reminder.task.title,
-          url: '/?view=today',
+          url: viewPaths.today,
           taskId: reminder.task.id,
           createdAt,
           updatedAt: createdAt,
@@ -493,7 +510,7 @@ function App() {
             id: reminder.id,
             title: reminder.title,
             body: reminder.task.title,
-            url: '/?view=today',
+            url: viewPaths.today,
             taskId: reminder.task.id,
             createdAt: new Date(reminder.scheduledAt).toISOString(),
             updatedAt: new Date(reminder.scheduledAt).toISOString(),
@@ -652,7 +669,7 @@ function App() {
         id,
         title: 'Prioridad alta para hoy',
         body: task.title,
-        url: '/?view=today',
+        url: viewPaths.today,
         taskId: task.id,
         createdAt,
         updatedAt: createdAt,
@@ -685,7 +702,7 @@ function App() {
                 className="in-app-notification-content"
                 type="button"
                 onClick={() => {
-                  setView('notifications')
+                  navigate(viewPaths.notifications)
                   setSidebarOpen(false)
                   setInAppNotifications((current) => current.filter((item) => item.id !== notification.id))
                   window.scrollTo({ left: 0, top: 0 })
@@ -732,7 +749,7 @@ function App() {
         onToggleListVisibility={listsState.toggleListVisibility}
         onUpdateList={listsState.updateList}
         onViewChange={(nextView) => {
-          setView(nextView)
+          navigate(viewPaths[nextView])
           setSidebarOpen(false)
         }}
       />
@@ -854,8 +871,9 @@ function App() {
           />
         ) : null}
 
-        {view === 'lists' ? (
-          <Dashboard
+        <Routes>
+          <Route path="/" element={<LegacyViewRedirect />} />
+          <Route path="/listas" element={<Dashboard
             lists={visibleLists}
             tasks={boardTasks}
             allTasks={visibleTasks}
@@ -867,11 +885,9 @@ function App() {
             }}
             onOpen={(task) => setSelectedTaskId(task.id)}
             onReorderLists={listsState.reorderLists}
-          />
-        ) : null}
+          />} />
 
-        {view === 'today' ? (
-          <TodayPage
+          <Route path="/hoy" element={<TodayPage
             filters={todayFilters}
             lists={visibleLists}
             tasks={visibleTasks}
@@ -887,11 +903,9 @@ function App() {
             }}
             onFiltersChange={setTodayFilters}
             onOpen={(task) => setSelectedTaskId(task.id)}
-          />
-        ) : null}
+          />} />
 
-        {view === 'tomorrow' ? (
-          <TodayPage
+          <Route path="/manana" element={<TodayPage
             day="tomorrow"
             filters={tomorrowFilters}
             lists={visibleLists}
@@ -908,31 +922,25 @@ function App() {
             }}
             onFiltersChange={setTomorrowFilters}
             onOpen={(task) => setSelectedTaskId(task.id)}
-          />
-        ) : null}
+          />} />
 
-        {view === 'calendar' ? (
-          <CalendarPage
+          <Route path="/calendario" element={<CalendarPage
             calendarMode={calendarMode}
             tasks={calendarTasks}
             onComplete={handleComplete}
             onMoveTask={handleMoveTask}
             onOpenTask={(task) => setSelectedTaskId(task.id)}
-          />
-        ) : null}
+          />} />
 
-        {view === 'notifications' ? (
-          <NotificationsPage
+          <Route path="/notificaciones" element={<NotificationsPage
             notifications={inboxNotifications}
             onComplete={handleCompleteNotification}
             onOpenTask={(taskId) => {
               if (allTasks.some((task) => task.id === taskId)) setSelectedTaskId(taskId)
             }}
-          />
-        ) : null}
+          />} />
 
-        {view === 'canvas' ? (
-          <CanvasPage
+          <Route path="/canvas" element={<CanvasPage
             canvasState={canvasState}
             tasks={filterTasks(visibleTasks, {
               ...filters,
@@ -941,8 +949,9 @@ function App() {
             })}
             onOpen={(task) => setSelectedTaskId(task.id)}
             onReview={canvasState.markReviewed}
-          />
-        ) : null}
+          />} />
+          <Route path="*" element={<Navigate replace to="/hoy" />} />
+        </Routes>
       </main>
 
       {(isCreatingTask || selectedTask) && (

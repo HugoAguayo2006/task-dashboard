@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
     title: data.title || 'Chalendar',
     body: data.body || 'Tienes una tarea pendiente.',
     tag: id,
-    url: data.url || '/?view=today',
+    url: data.url || '/hoy',
     taskId: data.taskId,
     createdAt,
     updatedAt: createdAt,
@@ -63,7 +63,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = new URL(event.notification.data?.url || '/?view=today', self.location.origin).href
+  const targetUrl = new URL(event.notification.data?.url || '/hoy', self.location.origin).href
   event.waitUntil((async () => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     const existing = clients.find((client) => client.url.startsWith(self.location.origin))
