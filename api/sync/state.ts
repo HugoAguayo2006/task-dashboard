@@ -34,6 +34,56 @@ type SyncState = {
   updatedAt: string
 }
 
+const foreverRecurrenceWindow = 15
+
+type SyncTask = {
+  completed?: unknown
+  dueDate?: unknown
+  dueTime?: unknown
+  recurrenceForever?: unknown
+  recurrenceId?: unknown
+  recurrenceIndex?: unknown
+}
+
+function isSyncTask(value: unknown): value is SyncTask {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function recurrenceSortKey(task: SyncTask) {
+  const dueDate = typeof task.dueDate === 'string' && task.dueDate ? task.dueDate : '9999-12-31'
+  const dueTime = typeof task.dueTime === 'string' && task.dueTime ? task.dueTime : '23:59'
+  const index = typeof task.recurrenceIndex === 'number' ? task.recurrenceIndex : 0
+  return `${dueDate} ${dueTime} ${String(index).padStart(8, '0')}`
+}
+
+// Keep legacy states from making a phone download hundreds of future copies of
+// the same task. Completed copies are intentionally kept as task history.
+function limitForeverRecurringTasks<T>(tasks: T[]) {
+  const pendingBySeries = new Map<string, Array<{ index: number; task: SyncTask }>>()
+
+  tasks.forEach((task, index) => {
+    if (!isSyncTask(task) || task.recurrenceForever !== true || typeof task.recurrenceId !== 'string' || task.completed === true) return
+    pendingBySeries.set(task.recurrenceId, [...(pendingBySeries.get(task.recurrenceId) ?? []), { index, task }])
+  })
+
+  const retainedIndexes = new Set<number>()
+  for (const series of pendingBySeries.values()) {
+    series
+      .sort((first, second) => recurrenceSortKey(first.task).localeCompare(recurrenceSortKey(second.task)))
+      .slice(0, foreverRecurrenceWindow)
+      .forEach(({ index }) => retainedIndexes.add(index))
+  }
+
+  return tasks.filter((task, index) =>
+    !isSyncTask(task) || task.recurrenceForever !== true || typeof task.recurrenceId !== 'string' || task.completed === true || retainedIndexes.has(index),
+  )
+}
+
+function limitForeverRecurrencesInState(state: SyncState): SyncState {
+  const tasks = limitForeverRecurringTasks(state.tasks)
+  return tasks.length === state.tasks.length ? state : { ...state, tasks }
+}
+
 function isStringRecord(value: unknown) {
   return value === undefined || (
     Boolean(value) &&
@@ -168,7 +218,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const state = row?.data
       ? { ...row.data, updatedAt: row.updated_at ?? row.data.updatedAt }
       : null
-    response.status(200).json({ state })
+    response.status(200).json({ state: state ? limitForeverRecurrencesInState(state) : null })
     return
   }
 
@@ -193,6 +243,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return
     }
 
+    const state = limitForeverRecurrencesInState(body.state)
     const expectedUpdatedAt = body.baseUpdatedAt
     endpoint.searchParams.set('select', 'updated_at')
     if (expectedUpdatedAt) {
@@ -209,8 +260,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
           : 'resolution=ignore-duplicates,return=representation',
       },
       body: JSON.stringify(expectedUpdatedAt
-        ? { data: body.state, updated_at: body.state.updatedAt }
-        : { id: syncConfig.syncId, data: body.state, updated_at: body.state.updatedAt }),
+        ? { data: state, updated_at: state.updatedAt }
+        : { id: syncConfig.syncId, data: state, updated_at: state.updatedAt }),
     })
 
     const payload = await supabaseResponse.text()

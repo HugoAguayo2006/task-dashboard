@@ -5,9 +5,8 @@ import type { SyncTombstones } from '../types/sync'
 import { makeInitialTasks } from '../data/initialWorkspace'
 import { addToISODate, monthlyRecurringTaskTitle } from '../utils/dates'
 import { isSeedTaskId, mergeInitialTasks } from '../utils/mergeTasks'
+import { FOREVER_RECURRENCE_WINDOW, limitForeverRecurringTasks } from '../utils/recurrenceWindow'
 import { readStorage, writeStorage } from '../services/storageService'
-
-const FOREVER_RECURRENCE_WINDOW = 180
 
 function normalizeMonthlyRecurrenceTitles(tasks: Task[]) {
   const baseTitles = new Map<string, string>()
@@ -112,18 +111,19 @@ function createRecurringTaskFromTemplate(
 }
 
 function normalizeForeverRecurrences(tasks: Task[]) {
+  const windowedTasks = limitForeverRecurringTasks(tasks)
   const seriesById = new Map<string, Task[]>()
 
-  for (const task of tasks) {
+  for (const task of windowedTasks) {
     if (!task.recurrenceId || !task.recurrenceForever) continue
     seriesById.set(task.recurrenceId, [...(seriesById.get(task.recurrenceId) ?? []), task])
   }
 
-  if (!seriesById.size) return tasks
+  if (!seriesById.size) return windowedTasks
 
   const timestamp = new Date().toISOString()
-  let changed = false
-  const nextTasks = [...tasks]
+  let changed = windowedTasks.length !== tasks.length
+  const nextTasks = [...windowedTasks]
 
   for (const [recurrenceId, series] of seriesById) {
     const pattern = inferRecurrencePattern(series)
@@ -148,23 +148,13 @@ function normalizeForeverRecurrences(tasks: Task[]) {
     }
 
     const existingDates = new Set(normalizedSeries.map((task) => task.dueDate))
+    const pendingTasks = normalizedSeries.filter((task) => !task.completed)
     const highestIndex = Math.max(...normalizedSeries.map((task) => task.recurrenceIndex ?? 1))
     const firstIndex = pattern.firstTask.recurrenceIndex ?? 1
-    const baseOffset = firstIndex - 1
-    const lastDate = addToISODate(
-      pattern.firstTask.dueDate,
-      pattern.interval * (FOREVER_RECURRENCE_WINDOW - 1),
-      pattern.unit,
-    )
-    const latestDate = normalizedSeries.reduce(
-      (latest, task) => (task.dueDate > latest ? task.dueDate : latest),
-      pattern.firstTask.dueDate,
-    )
-
-    if (latestDate >= lastDate) continue
 
     let nextIndex = highestIndex + 1
-    while (nextIndex <= FOREVER_RECURRENCE_WINDOW + baseOffset) {
+    let pendingCount = pendingTasks.length
+    while (pendingCount < FOREVER_RECURRENCE_WINDOW) {
       const dueDate = addToISODate(
         pattern.firstTask.dueDate,
         pattern.interval * (nextIndex - firstIndex),
@@ -188,6 +178,7 @@ function normalizeForeverRecurrences(tasks: Task[]) {
             timestamp,
           ),
         )
+        pendingCount += 1
       }
       nextIndex += 1
     }

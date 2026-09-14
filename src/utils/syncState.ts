@@ -7,6 +7,7 @@ import type {
   SyncTombstones,
 } from '../types/sync'
 import type { Task } from '../types/task'
+import { limitForeverRecurringTasks } from './recurrenceWindow'
 
 const epoch = '1970-01-01T00:00:00.000Z'
 
@@ -184,7 +185,7 @@ function mergeLists(local: TaskList[], remote: TaskList[], tombstones: SyncTombs
 }
 
 function mergeTasks(local: Task[], remote: Task[], tombstones: SyncTombstones) {
-  return mergeEntities(local, remote, tombstones)
+  return limitForeverRecurringTasks(mergeEntities(local, remote, tombstones))
 }
 
 function mergeNotifications(local: AppNotification[], remote: AppNotification[]) {
