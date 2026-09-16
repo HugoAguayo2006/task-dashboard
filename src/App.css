@@ -1161,9 +1161,9 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
 
 /* Modal, forms and pickers ------------------------------------------------- */
 .modal-backdrop { position: fixed; z-index: var(--layer-modal); inset: 0; display: grid; padding: var(--space-5); place-items: center; background: var(--backdrop); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fade-in var(--transition-fast); }
-.task-modal { position: relative; width: min(760px, 100%); max-height: min(900px, calc(100dvh - 40px)); padding: clamp(20px, 4vw, 36px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--separator); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-float); animation: sheet-in var(--transition); }
+.task-modal { position: relative; width: min(760px, 100%); min-width: 0; max-height: min(900px, calc(100dvh - 40px)); padding: clamp(20px, 4vw, 36px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--separator); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-float); animation: sheet-in var(--transition); }
 .modal-close { position: absolute; z-index: 2; top: var(--space-4); right: var(--space-4); }
-.task-modal h2 { padding-right: 44px; margin: 4px 0 var(--space-4); color: var(--text-strong); font-size: clamp(26px, 4vw, 34px); font-weight: 730; letter-spacing: -0.035em; line-height: 1.12; }
+.task-modal h2 { min-width: 0; max-width: 100%; padding-right: 44px; margin: 4px 0 var(--space-4); overflow-wrap: anywhere; word-break: break-word; color: var(--text-strong); font-size: clamp(26px, 4vw, 34px); font-weight: 730; letter-spacing: -0.035em; line-height: 1.12; }
 .task-form,
 .details-panel { display: grid; gap: var(--space-4); }
 .task-form > .section-heading { display: block; }
