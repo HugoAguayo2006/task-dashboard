@@ -588,10 +588,10 @@ select {
   padding: var(--space-2);
   border: 1px solid var(--separator);
   border-radius: var(--radius-lg);
-  background: var(--surface-glass);
+  background: var(--surface-1);
   box-shadow: var(--shadow-float);
-  backdrop-filter: saturate(170%) blur(28px);
-  -webkit-backdrop-filter: saturate(170%) blur(28px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   animation: notification-in var(--transition);
 }
 
