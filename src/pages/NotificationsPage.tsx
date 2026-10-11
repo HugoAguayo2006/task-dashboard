@@ -17,14 +17,42 @@ function formatNotificationDate(value: string) {
   return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date)
 }
 
+type VisibleNotification = AppNotification & {
+  groupedIds: string[]
+}
+
+function notificationDisplayKey(notification: AppNotification) {
+  if (notification.taskId) return `task:${notification.taskId}`
+  return `content:${notification.title}\u0000${notification.body}\u0000${notification.url}`
+}
+
+function getVisibleNotifications(notifications: AppNotification[]): VisibleNotification[] {
+  const grouped = new Map<string, VisibleNotification>()
+
+  notifications
+    .filter((notification) => !notification.completed)
+    .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))
+    .forEach((notification) => {
+      const key = notificationDisplayKey(notification)
+      const visible = grouped.get(key)
+
+      if (visible) {
+        visible.groupedIds.push(notification.id)
+        return
+      }
+
+      grouped.set(key, { ...notification, groupedIds: [notification.id] })
+    })
+
+  return [...grouped.values()]
+}
+
 export function NotificationsPage({
   notifications,
   onComplete,
   onOpenTask,
 }: NotificationsPageProps) {
-  const pendingNotifications = notifications
-    .filter((notification) => !notification.completed)
-    .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))
+  const pendingNotifications = getVisibleNotifications(notifications)
 
   return (
     <section className="notifications-page">
@@ -59,7 +87,7 @@ export function NotificationsPage({
                 aria-label={`Completar notificación: ${notification.body}`}
                 className="notification-complete-button"
                 type="button"
-                onClick={() => onComplete(notification.id)}
+                onClick={() => notification.groupedIds.forEach(onComplete)}
               >
                 <Icon name="check" />
                 <span>Completar</span>
