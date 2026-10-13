@@ -1,91 +1,17 @@
+import type { Task } from '../../src/types/task.ts'
+import { remindersForTask } from '../../src/utils/reminders.ts'
 import webpush from 'web-push'
 
 type VercelRequest = { method?: string; headers?: Record<string, string | string[] | undefined> }
 type VercelResponse = { status: (code: number) => VercelResponse; json: (body: unknown) => void }
-type Task = {
-  id: string
-  title: string
-  dueDate: string
-  dueTime?: string
-  priority?: 'low' | 'medium' | 'high'
-  completed?: boolean
-  createdAt?: string
-  updatedAt?: string
-}
 type Subscription = { endpoint: string; p256dh: string; auth: string; timezone: string }
-type Reminder = {
-  id: string
-  inboxId: string
-  kind: 'high-morning' | 'high-evening' | 'one-day' | 'one-hour' | 'due-now'
-  task: Task
-  scheduledAt: Date
-  label: string
-}
-
-// GitHub Actions puede retrasar u omitir ejecuciones programadas. Como cada aviso se
+// El cron puede retrasar u omitir ejecuciones programadas. Como cada aviso se
 // reclama de forma unica en Supabase, podemos recuperar un dia completo sin duplicarlo.
 const REMINDER_LOOKBACK_MS = 26 * 60 * 60_000
 
 function header(request: VercelRequest, name: string) {
   const value = request.headers?.[name] ?? request.headers?.[name.toLowerCase()]
   return Array.isArray(value) ? value[0] : value
-}
-
-function zonedDate(date: string, time: string, timezone: string) {
-  const [year, month, day] = date.split('-').map(Number)
-  const [hour, minute] = time.split(':').map(Number)
-  let candidate = Date.UTC(year, month - 1, day, hour, minute)
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  })
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const parts = Object.fromEntries(formatter.formatToParts(new Date(candidate)).map((part) => [part.type, part.value]))
-    const represented = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute)
-    candidate += Date.UTC(year, month - 1, day, hour, minute) - represented
-  }
-  return new Date(candidate)
-}
-
-function remindersForTask(task: Task, timezone: string): Reminder[] {
-  if (!task.dueDate || task.completed) return []
-  const reminders: Reminder[] = []
-  if (task.priority === 'high') {
-    const morningAt = zonedDate(task.dueDate, '08:00', timezone)
-    const eveningAt = zonedDate(task.dueDate, '17:00', timezone)
-    reminders.push(
-      { id: `${task.id}:high-morning:${morningAt.toISOString()}`, inboxId: `${task.id}:high-morning:${task.dueDate}`, kind: 'high-morning', task, scheduledAt: morningAt, label: 'Prioridad alta para hoy' },
-      { id: `${task.id}:high-evening:${eveningAt.toISOString()}`, inboxId: `${task.id}:high-evening:${task.dueDate}`, kind: 'high-evening', task, scheduledAt: eveningAt, label: 'Recordatorio de prioridad alta' },
-    )
-  }
-  if (task.dueTime) {
-    const dueAt = zonedDate(task.dueDate, task.dueTime, timezone)
-    for (const [kind, milliseconds, label] of [
-      ['one-day', 86_400_000, 'Vence en 1 día'],
-      ['one-hour', 3_600_000, 'Vence en 1 hora'],
-      ['due-now', 0, 'Tarea para ahora'],
-    ] as const) {
-      const scheduledAt = new Date(dueAt.getTime() - milliseconds)
-      reminders.push({
-        id: `${task.id}:${kind}:${scheduledAt.toISOString()}`,
-        inboxId: `${task.id}:${kind}:${task.dueDate}T${task.dueTime}`,
-        kind,
-        task,
-        scheduledAt,
-        label,
-      })
-    }
-  }
-  // No recuperamos avisos cuya hora ya habia pasado cuando la tarea se creo o edito.
-  // El margen permite crear una tarea exactamente a una hora de su vencimiento.
-  const changedAt = Date.parse(task.updatedAt || task.createdAt || '')
-  if (!Number.isFinite(changedAt)) return reminders
-  return reminders.filter((reminder) =>
-    // La pagina muestra el aviso de una hora aunque la tarea se haya creado o
-    // editado dentro de esa ultima hora. El push debe seguir la misma regla.
-    reminder.kind === 'one-hour' || reminder.scheduledAt.getTime() >= changedAt - 60_000,
-  )
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -153,10 +79,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
           url: '/hoy',
           taskId: reminder.task.id,
           scheduledAt: reminder.scheduledAt.toISOString(),
-        }), reminder.kind === 'one-hour'
+        }), reminder.urgent
           ? {
-              // Apple puede diferir los pushes con urgencia normal. Este aviso
-              // pierde utilidad si llega tarde, por eso se entrega de inmediato.
+              // Los avisos cercanos al vencimiento solicitan entrega inmediata.
               urgency: 'high',
               TTL: 60 * 60,
             }

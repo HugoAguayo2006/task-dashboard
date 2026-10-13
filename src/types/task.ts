@@ -3,6 +3,8 @@ export type TaskPriority = 'low' | 'medium' | 'high'
 export type AppView = 'today' | 'tomorrow' | 'notifications' | 'calendar' | 'lists' | 'canvas'
 export type CalendarMode = 'month' | 'week' | 'agenda'
 export type RepeatUnit = 'day' | 'week' | 'month' | 'year'
+export type ReminderUnit = 'minute' | 'hour' | 'day' | 'week' | 'month'
+export type TaskReminder = { amount: number; unit: ReminderUnit }
 
 export type TaskRepeat = {
   enabled: boolean
@@ -18,6 +20,8 @@ export type Task = {
   description?: string
   dueDate: string
   dueTime?: string
+  // Missing: legacy automatic reminders. Empty: no reminders.
+  reminders?: TaskReminder[]
   listId: string
   color: string
   completed: boolean
@@ -46,6 +50,7 @@ export type TaskDraft = {
   description: string
   dueDate: string
   dueTime: string
+  reminders?: TaskReminder[]
   listId: string
   priority: TaskPriority
   tags: string[]

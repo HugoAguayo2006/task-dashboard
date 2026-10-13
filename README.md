@@ -115,8 +115,25 @@ En iPhone: Ajustes > Apps > Calendario > Cuentas > Agregar cuenta > Otra > Agreg
 
 Chalendar funciona como PWA en iPhone/iPad y envía estos recordatorios para tareas manuales pendientes:
 
+En **Recordatorios**, al crear o editar una tarea, puedes combinar avisos de un mes,
+una semana, un día, una hora, 30 o 15 minutos antes y a la hora indicada. También
+puedes añadir otra cantidad (1–365) en minutos, horas, días, semanas o meses, o
+seleccionar **Sin avisos**. Los avisos personalizados sustituyen a los automáticos,
+incluidos los de prioridad alta. Se guardan con la tarea y se sincronizan con la nube.
+Las repeticiones creadas juntas heredan estos avisos; después se editan por ocurrencia.
+
+Sin fecha no se programan avisos personalizados; sin hora se toma como referencia
+las 9:00 a. m. en la zona horaria del dispositivo. Un mes antes conserva el día del
+mes cuando existe y, de lo contrario, usa el último día de ese mes. Los avisos que
+ya pasaron al guardar no se recuperan (con un margen de un minuto).
+
+La opción **Automáticos**, también usada por las tareas existentes, conserva:
+
 - Prioridad alta: a las 8:00 a. m. y a las 5:00 p. m. de su fecha.
 - Tareas con hora: 1 día antes, 1 hora antes y a la hora indicada.
+
+Las pruebas del cálculo de fechas, compatibilidad y envío push con servicios simulados
+se ejecutan con `npm test` (Node.js 22.18 o posterior).
 
 Ejecuta de nuevo [`docs/supabase-schema.sql`](docs/supabase-schema.sql) y genera un par de llaves:
 

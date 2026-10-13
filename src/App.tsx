@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { remindersForTask } from './utils/reminders'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { CanvasStatus } from './components/CanvasStatus'
@@ -434,47 +435,13 @@ function App() {
       const recentWindow = now - 10 * 60_000
       const inboxWindow = now - NOTIFICATION_LOOKBACK_MS
       const shown = readShownReminderIds()
-      const dueReminders = allTasks.flatMap((task) => {
-        if (task.completed || !task.dueDate) return []
-        const reminders: Array<{
-          id: string
-          kind: 'high-morning' | 'high-evening' | 'one-day' | 'one-hour' | 'due-now'
-          title: string
-          scheduledAt: number
-        }> = []
-        if (task.priority === 'high') {
-          reminders.push(
-            {
-              id: `${task.id}:high-morning:${task.dueDate}`,
-              kind: 'high-morning',
-              title: 'Prioridad alta para hoy',
-              scheduledAt: new Date(`${task.dueDate}T08:00:00`).getTime(),
-            },
-            {
-              id: `${task.id}:high-evening:${task.dueDate}`,
-              kind: 'high-evening',
-              title: 'Recordatorio de prioridad alta',
-              scheduledAt: new Date(`${task.dueDate}T17:00:00`).getTime(),
-            },
-          )
-        }
-        if (task.dueTime) {
-          const dueAt = new Date(`${task.dueDate}T${task.dueTime}:00`).getTime()
-          reminders.push(
-            { id: `${task.id}:one-day:${task.dueDate}T${task.dueTime}`, kind: 'one-day', title: 'Vence en 1 día', scheduledAt: dueAt - 86_400_000 },
-            { id: `${task.id}:one-hour:${task.dueDate}T${task.dueTime}`, kind: 'one-hour', title: 'Vence en 1 hora', scheduledAt: dueAt - 3_600_000 },
-            { id: `${task.id}:due-now:${task.dueDate}T${task.dueTime}`, kind: 'due-now', title: 'Tarea para ahora', scheduledAt: dueAt },
-          )
-        }
-        const changedAt = Date.parse(task.updatedAt || task.createdAt)
-        return reminders
-          .filter((reminder) =>
-            !Number.isFinite(changedAt) ||
-            reminder.kind === 'one-hour' ||
-            reminder.scheduledAt >= changedAt - 60_000,
-          )
-          .map((reminder) => ({ ...reminder, task }))
-      })
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const dueReminders = allTasks.flatMap((task) => remindersForTask(task, timezone).map((reminder) => ({
+        ...reminder,
+        id: reminder.inboxId,
+        title: reminder.label,
+        scheduledAt: reminder.scheduledAt.getTime(),
+      })))
         .filter((reminder) =>
           reminder.scheduledAt <= now &&
           reminder.scheduledAt > inboxWindow,
@@ -610,6 +577,7 @@ function App() {
       description: task.description ?? '',
       dueDate,
       dueTime: task.dueTime ?? '',
+      reminders: task.reminders,
       listId: task.listId,
       priority: task.priority,
       tags: task.tags,
@@ -625,14 +593,15 @@ function App() {
 
   const handleSaveTaskDetails = async (
     task: Task,
-    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority },
+    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority; reminders?: Task['reminders'] },
   ) => {
     if (
       task.source !== 'manual' ||
       (task.dueDate === details.dueDate &&
         (task.dueTime ?? '') === details.dueTime &&
         task.listId === details.listId &&
-        task.priority === details.priority)
+        task.priority === details.priority &&
+        JSON.stringify(task.reminders) === JSON.stringify(details.reminders))
     ) {
       return syncDisabled.current ? 'local' : 'synced'
     }
@@ -648,6 +617,7 @@ function App() {
             listId: details.listId,
             color,
             priority: details.priority,
+            reminders: details.reminders,
             updatedAt: timestamp,
           }
         : currentTask,
@@ -656,6 +626,7 @@ function App() {
       if (
         task.priority === details.priority ||
         details.priority !== 'high' ||
+        details.reminders !== undefined ||
         task.completed ||
         details.dueDate !== todayISO()
       ) return

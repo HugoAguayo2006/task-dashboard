@@ -4,6 +4,7 @@ import type { RepeatUnit, Task, TaskDraft, TaskPriority } from '../types/task'
 import { palette, readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
 import { Icon } from './Icon'
+import { ReminderPicker } from './ReminderPicker'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
 type DetailSaveResult = 'synced' | 'local'
@@ -22,7 +23,7 @@ type TaskModalProps = {
   onEdit: (task: Task) => void
   onSaveTaskDetails: (
     task: Task,
-    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority },
+    details: { dueDate: string; dueTime: string; listId: string; priority: TaskPriority; reminders?: Task['reminders'] },
   ) => Promise<DetailSaveResult>
   onSave: (draft: TaskDraft) => void
 }
@@ -158,6 +159,7 @@ export function TaskModal({
   const [detailDueDate, setDetailDueDate] = useState(task?.dueDate ?? '')
   const [detailDueTime, setDetailDueTime] = useState(task?.dueTime ?? '')
   const [detailPriority, setDetailPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
+  const [detailReminders, setDetailReminders] = useState<Task['reminders']>(task?.reminders)
   const [detailListId, setDetailListId] = useState(task?.listId ?? '')
   const [showDetailTimePicker, setShowDetailTimePicker] = useState(false)
   const [detailSaveStatus, setDetailSaveStatus] = useState<DetailSaveStatus>('idle')
@@ -168,11 +170,16 @@ export function TaskModal({
     (detailDueDate !== task.dueDate ||
       detailDueTime !== (task.dueTime ?? '') ||
       detailListId !== task.listId ||
-      detailPriority !== task.priority),
+      detailPriority !== task.priority ||
+      JSON.stringify(detailReminders) !== JSON.stringify(task.reminders)),
   )
   const isSavingDetail = detailSaveStatus === 'saving'
 
   useEffect(() => {
+    if (mode !== 'form') {
+      initializedFormContext.current = null
+      return
+    }
     const defaultListId =
       lists.find((list) => list.name.trim().toLocaleLowerCase('es') === 'proyectos personales')?.id ??
       lists[0]?.id ??
@@ -194,6 +201,7 @@ export function TaskModal({
             description: task.description ?? '',
             dueDate: task.dueDate,
             dueTime: task.dueTime ?? '',
+            reminders: task.reminders,
             listId: task.listId,
             priority: task.priority,
             tags: task.tags,
@@ -207,7 +215,7 @@ export function TaskModal({
     setShowTimePicker(false)
     setRepeatPreset('none')
     setOccurrencesText(String(task ? emptyDraft.repeat.occurrences : emptyDraft.repeat.occurrences))
-  }, [defaultDueDate, lists, task])
+  }, [defaultDueDate, lists, mode, task])
 
   useEffect(() => {
     setDetailSaveStatus('idle')
@@ -218,8 +226,9 @@ export function TaskModal({
     setDetailDueTime(task?.dueTime ?? '')
     setDetailPriority(task?.priority ?? 'medium')
     setDetailListId(task?.listId ?? '')
+    setDetailReminders(task?.reminders)
     setShowDetailTimePicker(false)
-  }, [task?.id, task?.dueDate, task?.dueTime, task?.listId, task?.priority])
+  }, [task?.id, task?.dueDate, task?.dueTime, task?.listId, task?.priority, task?.reminders])
 
   const closeModal = useCallback(() => {
     if (isSavingDetail) return
@@ -301,6 +310,7 @@ export function TaskModal({
         dueTime: detailDueTime,
         listId: detailListId,
         priority: detailPriority,
+        reminders: detailReminders,
       })
       setShowDetailTimePicker(false)
       setDetailSaveStatus(result)
@@ -540,6 +550,10 @@ export function TaskModal({
                 </div>
               ) : null}
             </dl>
+            {task.source === 'manual' ? (
+              <ReminderPicker value={detailReminders} dueDate={detailDueDate} dueTime={detailDueTime}
+                disabled={isSavingDetail} onChange={(reminders) => { setDetailReminders(reminders); setDetailSaveStatus('idle') }} />
+            ) : null}
             {task.canvasUrl ? (
               <a className="canvas-link" href={task.canvasUrl} rel="noreferrer" target="_blank">
                 {task.source === 'canvas' ? 'Abrir en Canvas' : 'Abrir evento'}
@@ -559,7 +573,7 @@ export function TaskModal({
             <div className="modal-actions">
               {task.source === 'manual' ? (
                 <button className="edit-button" disabled={isSavingDetail} type="button" onClick={() => onEdit(task)}>
-                  Editar título o descripción
+                  Editar tarea
                 </button>
               ) : null}
               <button className="state-button" disabled={isSavingDetail} type="button" onClick={() => onComplete(task)}>
@@ -788,6 +802,8 @@ export function TaskModal({
                 onChange={(event) => setTagText(event.target.value)}
               />
             </label>
+            <ReminderPicker value={draft.reminders} dueDate={draft.dueDate} dueTime={draft.dueTime}
+              onChange={(reminders) => setDraft((current) => ({ ...current, reminders }))} />
             <section className="repeat-panel" aria-label="Repetición de tarea">
               <div className="repeat-heading">
                 <div>

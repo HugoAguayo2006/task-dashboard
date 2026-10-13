@@ -15,6 +15,7 @@ function matchesSeedTask(task: Task, seedTask: Task) {
     (task.description ?? '') === (seedTask.description ?? '') &&
     task.dueDate === seedTask.dueDate &&
     (task.dueTime ?? '') === (seedTask.dueTime ?? '') &&
+    JSON.stringify(task.reminders) === JSON.stringify(seedTask.reminders) &&
     task.listId === seedTask.listId &&
     task.priority === seedTask.priority &&
     task.completed === seedTask.completed &&
@@ -26,6 +27,7 @@ function changeScore(task: Task, seedTask: Task) {
   let score = 0
   if (task.dueDate !== seedTask.dueDate) score += 8
   if ((task.dueTime ?? '') !== (seedTask.dueTime ?? '')) score += 8
+  if (JSON.stringify(task.reminders) !== JSON.stringify(seedTask.reminders)) score += 8
   if (task.completed !== seedTask.completed) score += 4
   if (task.title !== seedTask.title) score += 2
   if ((task.description ?? '') !== (seedTask.description ?? '')) score += 2
