@@ -122,8 +122,11 @@ seleccionar **Sin avisos**. Los avisos personalizados sustituyen a los automáti
 incluidos los de prioridad alta. Se guardan con la tarea y se sincronizan con la nube.
 Las repeticiones creadas juntas heredan estos avisos; después se editan por ocurrencia.
 
-Sin fecha no se programan avisos personalizados; sin hora se toma como referencia
-las 9:00 a. m. en la zona horaria del dispositivo. Un mes antes conserva el día del
+Sin fecha no se programan avisos personalizados. Los avisos en horas, minutos y a la
+hora indicada requieren una hora; si se quita, se eliminan de la selección. Sin hora,
+los avisos en días, semanas y meses toman como referencia las 9:00 a. m. en la zona
+horaria del dispositivo. La sección **Recordatorio personalizado** permite elegir
+cuánto tiempo antes recibir otro aviso. Un mes antes conserva el día del
 mes cuando existe y, de lo contrario, usa el último día de ese mes. Los avisos que
 ya pasaron al guardar no se recuperan (con un margen de un minuto).
 

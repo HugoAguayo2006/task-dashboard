@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { normalizeReminders, reminderDate, remindersForTask } from '../src/utils/reminders.ts'
+import { normalizeReminders, reminderDate, remindersForTask, remindersForTime } from '../src/utils/reminders.ts'
 
 const timezone = 'America/Mexico_City'
 const task = { id: 'test', title: 'Entrega', dueDate: '2026-11-30', dueTime: '12:00', priority: 'high' }
@@ -40,6 +40,24 @@ test('undated, completed and disabled tasks do not produce reminders', () => {
 test('custom all-day reminders use 09:00 local time', () => {
   const result = remindersForTask({ ...task, dueTime: '', reminders: [{ amount: 1, unit: 'day' }] }, timezone)
   assert.equal(result[0].scheduledAt.toISOString(), '2026-11-29T15:00:00.000Z')
+})
+
+test('tasks without a time cannot schedule hour, minute or at-time custom reminders', () => {
+  const reminders = [
+    { amount: 1, unit: 'day' }, { amount: 1, unit: 'week' }, { amount: 1, unit: 'month' },
+    { amount: 1, unit: 'hour' }, { amount: 30, unit: 'minute' }, { amount: 0, unit: 'day' },
+  ]
+  const result = remindersForTask({ ...task, dueTime: '', reminders }, timezone)
+  assert.deepEqual(result.map(item => item.kind), ['custom-day-1', 'custom-day-7', 'custom-month-1'])
+  assert.equal(remindersForTask({ ...task, reminders }, timezone).length, 6)
+})
+
+test('removing the time clears incompatible selections and preserves automatic or disabled mode', () => {
+  const reminders = [{ amount: 1, unit: 'day' }, { amount: 1, unit: 'hour' }, { amount: 0, unit: 'minute' }]
+  assert.deepEqual(remindersForTime(reminders, ''), [{ amount: 1, unit: 'day' }])
+  assert.deepEqual(remindersForTime(reminders, '12:00'), reminders)
+  assert.equal(remindersForTime(undefined, ''), undefined)
+  assert.deepEqual(remindersForTime([], ''), [])
 })
 
 test('existing tasks retain automatic schedules and inbox IDs', () => {

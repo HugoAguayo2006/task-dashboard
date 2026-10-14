@@ -5,6 +5,7 @@ import { palette, readableColor, visibleOnDarkColor, visibleOnLightColor } from 
 import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISODate } from '../utils/dates'
 import { Icon } from './Icon'
 import { ReminderPicker } from './ReminderPicker'
+import { remindersForTime } from '../utils/reminders'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
 type DetailSaveResult = 'synced' | 'local'
@@ -310,7 +311,7 @@ export function TaskModal({
         dueTime: detailDueTime,
         listId: detailListId,
         priority: detailPriority,
-        reminders: detailReminders,
+        reminders: remindersForTime(detailReminders, detailDueTime),
       })
       setShowDetailTimePicker(false)
       setDetailSaveStatus(result)
@@ -471,7 +472,7 @@ export function TaskModal({
                             <TimeWheelColumn label="Periodo" options={wheelPeriods} value={selectedDetailTime.period} onChange={(value) => changeDetailTimePart('period', value)} />
                           </div>
                           <div className="time-wheel-actions">
-                            <button type="button" onClick={() => { setDetailDueTime(''); setDetailSaveStatus('idle'); setShowDetailTimePicker(false) }}>Sin hora</button>
+                            <button type="button" onClick={() => { setDetailDueTime(''); setDetailReminders((current) => remindersForTime(current, '')); setDetailSaveStatus('idle'); setShowDetailTimePicker(false) }}>Sin hora</button>
                             <button className="primary" type="button" onClick={() => setShowDetailTimePicker(false)}>Listo</button>
                           </div>
                         </div>
@@ -612,6 +613,7 @@ export function TaskModal({
               const occurrences = commitOccurrences()
               onSave({
                 ...draft,
+                reminders: remindersForTime(draft.reminders, draft.dueTime),
                 repeat: {
                   ...draft.repeat,
                   occurrences,
@@ -709,7 +711,7 @@ export function TaskModal({
                         <TimeWheelColumn label="Periodo" options={wheelPeriods} value={selectedTime.period} onChange={(value) => changeTimePart('period', value)} />
                       </div>
                       <div className="time-wheel-actions">
-                        <button type="button" onClick={() => { setDraft({ ...draft, dueTime: '' }); setShowTimePicker(false) }}>Sin hora</button>
+                        <button type="button" onClick={() => { setDraft({ ...draft, dueTime: '', reminders: remindersForTime(draft.reminders, '') }); setShowTimePicker(false) }}>Sin hora</button>
                         <button className="primary" type="button" onClick={() => setShowTimePicker(false)}>Listo</button>
                       </div>
                     </div>

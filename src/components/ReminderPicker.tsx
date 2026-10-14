@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import type { ReminderUnit, TaskReminder } from '../types/task'
-import { normalizeReminders, reminderDate, reminderKey, reminderLabel, reminderPresets } from '../utils/reminders'
+import { normalizeReminders, reminderDate, reminderKey, reminderLabel, reminderNeedsTime, reminderPresets, remindersForTime } from '../utils/reminders'
 import { Icon } from './Icon'
 
 type Props = {
@@ -15,13 +15,14 @@ export function ReminderPicker({ value, dueDate, dueTime, disabled, onChange }: 
   const headingId = useId()
   const [amount, setAmount] = useState('2')
   const [unit, setUnit] = useState<ReminderUnit>('day')
-  const selected = normalizeReminders(value ?? [])
+  const selected = remindersForTime(value, dueTime) ?? []
+  const selectedUnit = !dueTime && (unit === 'minute' || unit === 'hour') ? 'day' : unit
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const has = (reminder: TaskReminder) => selected.some((item) => reminderKey(item) === reminderKey(reminder))
   const toggle = (reminder: TaskReminder) => onChange(has(reminder)
     ? selected.filter((item) => reminderKey(item) !== reminderKey(reminder))
     : normalizeReminders([...selected, reminder]))
-  const custom = { amount: Number(amount), unit }
+  const custom = { amount: Number(amount), unit: selectedUnit }
   const validAmount = /^\d+$/.test(amount) && custom.amount >= 1 && custom.amount <= 365
   const customChoices = selected.filter((item) => !reminderPresets.some((preset) => reminderKey(preset) === reminderKey(item)))
   const pastCount = dueDate ? selected.filter((item) => reminderDate(dueDate, dueTime, item, timezone).getTime() < Date.now()).length : 0
@@ -41,20 +42,26 @@ export function ReminderPicker({ value, dueDate, dueTime, disabled, onChange }: 
       </div>
       <div className="reminder-options" role="group" aria-label="Anticipación de los recordatorios">
         {[...reminderPresets, ...customChoices].map((reminder) => (
-          <button type="button" key={reminderKey(reminder)} aria-pressed={has(reminder)} onClick={() => toggle(reminder)}>
+          <button type="button" key={reminderKey(reminder)} aria-pressed={has(reminder)}
+            disabled={!dueTime && reminderNeedsTime(reminder)} onClick={() => toggle(reminder)}>
             {has(reminder) ? <Icon name="check" size={15} /> : <Icon name="add" size={15} />}
             {reminderLabel(reminder)}
           </button>
         ))}
       </div>
+      {!dueTime ? <p className="reminder-time-hint">Agrega una hora para activar los avisos en horas, minutos o a la hora indicada.</p> : null}
       <div className="reminder-custom">
-        <label>Otra anticipación
-          <input aria-label="Cantidad de anticipación" inputMode="numeric" value={amount}
+        <div className="reminder-custom-heading">
+          <strong>Recordatorio personalizado</strong>
+          <p>Por ejemplo: elige 3 días y pulsa Añadir para recibir un aviso 3 días antes.</p>
+        </div>
+        <label>Cuánto tiempo antes
+          <input aria-label="Cantidad para el recordatorio personalizado" inputMode="numeric" value={amount}
             onChange={(event) => setAmount(event.target.value.replace(/\D/g, '').slice(0, 3))} />
         </label>
         <label>Unidad
-          <select value={unit} onChange={(event) => setUnit(event.target.value as ReminderUnit)}>
-            <option value="minute">Minutos</option><option value="hour">Horas</option>
+          <select value={selectedUnit} onChange={(event) => setUnit(event.target.value as ReminderUnit)}>
+            <option value="minute" disabled={!dueTime}>Minutos</option><option value="hour" disabled={!dueTime}>Horas</option>
             <option value="day">Días</option><option value="week">Semanas</option><option value="month">Meses</option>
           </select>
         </label>

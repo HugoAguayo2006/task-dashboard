@@ -31,6 +31,16 @@ export function normalizeReminders(value: TaskReminder[]): TaskReminder[] {
   return [...unique.values()]
 }
 
+export function reminderNeedsTime(reminder: TaskReminder) {
+  return reminder.amount === 0 || reminder.unit === 'minute' || reminder.unit === 'hour'
+}
+
+export function remindersForTime(value: TaskReminder[] | undefined, dueTime: string) {
+  if (value === undefined) return undefined
+  return normalizeReminders(Array.isArray(value) ? value : [])
+    .filter((reminder) => Boolean(dueTime) || !reminderNeedsTime(reminder))
+}
+
 export function reminderLabel(reminder: TaskReminder) {
   if (!reminder.amount) return 'A la hora indicada'
   const units = {
@@ -92,7 +102,7 @@ export function remindersForTask(task: ReminderTask, timezone: string) {
   }
   if (task.reminders !== undefined) {
     const seenTimes = new Set<number>()
-    for (const reminder of normalizeReminders(Array.isArray(task.reminders) ? task.reminders : [])) {
+    for (const reminder of remindersForTime(task.reminders, task.dueTime ?? '') ?? []) {
       const scheduledAt = reminderDate(task.dueDate, task.dueTime ?? '', reminder, timezone)
       if (seenTimes.has(scheduledAt.getTime())) continue
       seenTimes.add(scheduledAt.getTime())
