@@ -1457,3 +1457,5 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
   .app-shell { --separator: rgba(142, 142, 147, 0.82); --separator-soft: rgba(142, 142, 147, 0.58); }
   .app-shell.theme-light { --separator: rgba(60, 60, 67, 0.62); --separator-soft: rgba(60, 60, 67, 0.4); }
 }
+
+
