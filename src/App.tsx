@@ -931,6 +931,7 @@ function App() {
           lists={listsState.lists}
           mode={isCreatingTask ? 'form' : 'details'}
           task={isCreatingTask ? editingTask : selectedTask}
+          tasks={tasksState.tasks}
           onClose={() => {
             setIsCreatingTask(false)
             setEditingTask(null)

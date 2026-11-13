@@ -6,6 +6,7 @@ import { addDaysISO, buildMonthDays, formatLongDate, monthTitle, todayISO, toISO
 import { Icon } from './Icon'
 import { ReminderPicker } from './ReminderPicker'
 import { remindersForTime } from '../utils/reminders'
+import { getTaskRepeat } from '../utils/recurrence'
 
 type RepeatPreset = 'none' | 'three-days' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
 type DetailSaveResult = 'synced' | 'local'
@@ -16,6 +17,7 @@ type TaskModalProps = {
   lists: TaskList[]
   mode: 'form' | 'details'
   task: Task | null
+  tasks: Task[]
   onClose: () => void
   onComplete: (task: Task) => void
   onCreateList: (name: string, color: string) => string | undefined
@@ -138,6 +140,7 @@ export function TaskModal({
   lists,
   mode,
   task,
+  tasks,
   onClose,
   onComplete,
   onCreateList,
@@ -195,6 +198,7 @@ export function TaskModal({
     }
 
     initializedFormContext.current = formContext
+    const repeat = task?.recurrenceId ? getTaskRepeat(task, tasks) : emptyDraft.repeat
     setDraft(
       task
         ? {
@@ -206,7 +210,7 @@ export function TaskModal({
             listId: task.listId,
             priority: task.priority,
             tags: task.tags,
-            repeat: emptyDraft.repeat,
+            repeat,
           }
         : { ...emptyDraft, dueDate: defaultDueDate ?? todayISO(), listId: defaultListId },
     )
@@ -214,9 +218,14 @@ export function TaskModal({
     setShowNewListComposer(false)
     setNewListName('')
     setShowTimePicker(false)
-    setRepeatPreset('none')
-    setOccurrencesText(String(task ? emptyDraft.repeat.occurrences : emptyDraft.repeat.occurrences))
-  }, [defaultDueDate, lists, mode, task])
+    setRepeatPreset(repeat.enabled
+      ? (Object.keys(repeatPresets) as RepeatPreset[]).find((preset) =>
+          preset !== 'none' && preset !== 'custom' &&
+          repeatPresets[preset].interval === repeat.interval && repeatPresets[preset].unit === repeat.unit,
+        ) ?? 'custom'
+      : 'none')
+    setOccurrencesText(String(repeat.occurrences))
+  }, [defaultDueDate, lists, mode, task, tasks])
 
   useEffect(() => {
     setDetailSaveStatus('idle')
@@ -326,6 +335,7 @@ export function TaskModal({
       repeat: {
         ...current.repeat,
         ...repeatPresets[preset],
+        forever: task?.recurrenceId ? current.repeat.forever : repeatPresets[preset].forever,
       },
     }))
   }
@@ -811,7 +821,9 @@ export function TaskModal({
                 <div>
                   <span>Repetición</span>
                   <p>
-                    {draft.repeat.enabled
+                    {task?.recurrenceId
+                      ? 'La nueva frecuencia se aplicará desde esta tarea. Las repeticiones completadas conservarán sus fechas y su numeración.'
+                      : draft.repeat.enabled
                       ? draft.repeat.forever
                         ? 'Se mantendrá como serie continua.'
                         : 'Se crearán varias tareas con fechas futuras.'
@@ -824,7 +836,7 @@ export function TaskModal({
                   value={repeatPreset}
                   onChange={(event) => changeRepeatPreset(event.target.value as RepeatPreset)}
                 >
-                  <option value="none">No repetir</option>
+                  {!task?.recurrenceId ? <option value="none">No repetir</option> : null}
                   <option value="three-days">Cada 3 días</option>
                   <option value="weekly">Cada semana</option>
                   <option value="biweekly">Cada 2 semanas</option>
@@ -832,7 +844,7 @@ export function TaskModal({
                   <option value="custom">Personalizado</option>
                 </select>
               </div>
-              {draft.repeat.enabled ? (
+              {draft.repeat.enabled && (repeatPreset === 'custom' || !task?.recurrenceId) ? (
                 <div className="repeat-options">
                   {repeatPreset === 'custom' ? (
                     <>
@@ -876,7 +888,7 @@ export function TaskModal({
                       </label>
                     </>
                   ) : null}
-                  <label className="forever-toggle">
+                  {!task?.recurrenceId ? <label className="forever-toggle">
                     <input
                       checked={draft.repeat.forever}
                       type="checkbox"
@@ -891,8 +903,8 @@ export function TaskModal({
                       }
                     />
                     <span>Repetir para siempre</span>
-                  </label>
-                  {!draft.repeat.forever ? (
+                  </label> : null}
+                  {!task?.recurrenceId && !draft.repeat.forever ? (
                     <label>
                       Repeticiones
                       <input
