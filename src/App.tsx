@@ -26,6 +26,7 @@ import type { AppNotification } from './types/notification'
 import type { SyncState, SyncStatus } from './types/sync'
 import type { AppView, CalendarMode, Task, TaskFilters, TaskPriority } from './types/task'
 import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from './utils/dates'
+import { getVisibleNotifications } from './utils/notifications'
 import {
   latestWorkspaceTimestamp,
   mergeSyncStates,
@@ -417,9 +418,7 @@ function App() {
     const visibleListIds = new Set(visibleLists.map((list) => list.id))
     return allTasks.filter((task) => visibleListIds.has(task.listId))
   }, [allTasks, visibleLists])
-  const pendingNotificationCount = inboxNotifications.filter(
-    (notification) => !notification.completed,
-  ).length
+  const pendingNotificationCount = getVisibleNotifications(inboxNotifications).length
 
   useEffect(() => {
     const hiddenListIds = new Set(listsState.lists.filter((list) => list.hidden).map((list) => list.id))
