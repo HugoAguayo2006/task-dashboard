@@ -794,7 +794,11 @@ function App() {
                       </button>
                     </div>
                     <div className="settings-panel-content">
-                      <CanvasStatus status={canvasState.status} onRefresh={canvasState.refresh} />
+                      <CanvasStatus
+                        status={canvasState.status}
+                        onRefresh={canvasState.refresh}
+                        onSaveAccessKey={canvasState.saveAccessKey}
+                      />
                       <ExternalCalendarStatus
                         status={externalCalendarState.status}
                         onRefresh={externalCalendarState.refresh}

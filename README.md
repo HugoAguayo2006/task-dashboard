@@ -52,14 +52,25 @@ La app usa una función serverless compatible con Vercel:
 /api/canvas/calendar-events
 ```
 
-Configura estas variables como privadas en Vercel:
+La opcion recomendada no requiere token. En Canvas abre **Calendario → Calendar Feed** y copia la URL de suscripcion. Configurala como variable privada en Vercel:
+
+```bash
+CANVAS_ICAL_URL=webcal://experiencia21.tec.mx/feeds/calendars/user_....ics
+CANVAS_READ_KEY=un_codigo_aleatorio_largo
+```
+
+En local, agrega ambas variables a `.env.local` y ejecuta `npm run dev:vercel`. Introduce `CANVAS_READ_KEY` una sola vez en la seccion Canvas de Chalendar en cada dispositivo; se guarda localmente. La app consulta el feed desde el servidor al abrirse, cada cinco minutos mientras este visible y al volver a la pestana. Los eventos aparecen en la seccion Canvas y en el calendario. Los dos valores privados deben permanecer fuera de Git y de las variables `VITE_*`.
+
+El feed de Canvas incluye entregas y eventos del calendario, pero no los elementos **To Do**. Canvas limita la exportacion a 1,000 elementos, desde 30 dias atras hasta 366 dias en el futuro. Al inscribirte en un curso nuevo, revisa el enlace de suscripcion: Canvas indica que puede ser necesario volver a importarlo. La app no puede detectar si ya entregaste una tarea; el boton de revision solo cambia su estado en Chalendar.
+
+Si el enlace iCal no esta disponible, la integracion anterior mediante API sigue como alternativa. Configura estas variables como privadas en Vercel:
 
 ```bash
 CANVAS_BASE_URL=https://experiencia21.tec.mx
 CANVAS_ACCESS_TOKEN=tu_token_de_canvas
 ```
 
-No pongas el token real en el frontend. Las variables `VITE_*` quedan embebidas en el bundle del navegador, por eso la integración incluida evita `VITE_CANVAS_ACCESS_TOKEN` y llama a Canvas desde la función serverless.
+No pongas el token real en el frontend. Las variables `VITE_*` quedan embebidas en el bundle del navegador; la funcion serverless es quien consulta Canvas. Si configuras ambas opciones, se usa primero `CANVAS_ICAL_URL`.
 
 La guia especifica para Canvas Tec y el mensaje para pedir el token estan en [`docs/CANVAS_TEC.md`](docs/CANVAS_TEC.md).
 

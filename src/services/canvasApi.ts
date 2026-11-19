@@ -6,9 +6,11 @@ type CanvasResponse = {
   code?: string
 }
 
-async function fetchCanvas(type: 'assignment' | 'event', startDate: string, endDate: string) {
-  const params = new URLSearchParams({ type, start_date: startDate, end_date: endDate })
-  const response = await fetch(`/api/canvas/calendar-events?${params.toString()}`)
+export async function fetchCanvasCalendar(startDate: string, endDate: string, accessKey: string) {
+  const params = new URLSearchParams({ type: 'all', start_date: startDate, end_date: endDate })
+  const response = await fetch(`/api/canvas/calendar-events?${params.toString()}`, {
+    headers: accessKey ? { 'X-Canvas-Key': accessKey } : {},
+  })
   const data = (await response.json().catch(() => ({}))) as CanvasResponse
 
   if (!response.ok) {
@@ -18,12 +20,4 @@ async function fetchCanvas(type: 'assignment' | 'event', startDate: string, endD
   }
 
   return data.events ?? []
-}
-
-export function fetchCanvasAssignments(startDate: string, endDate: string) {
-  return fetchCanvas('assignment', startDate, endDate)
-}
-
-export function fetchCanvasEvents(startDate: string, endDate: string) {
-  return fetchCanvas('event', startDate, endDate)
 }

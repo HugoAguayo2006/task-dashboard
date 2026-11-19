@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchCanvasAssignments, fetchCanvasEvents } from '../services/canvasApi'
-import type { CanvasStatus } from '../types/canvas'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { fetchCanvasCalendar } from '../services/canvasApi'
+import type { CanvasCalendarEvent, CanvasStatus } from '../types/canvas'
 import type { Task } from '../types/task'
 import { canvasColor } from '../utils/colors'
 import { addDaysISO, todayISO } from '../utils/dates'
 import { readStorage, writeStorage } from '../services/storageService'
+import { canvasLocalDue } from '../utils/canvasDates'
 
 type CanvasLocalState = {
   hiddenIds: string[]
@@ -16,9 +17,13 @@ const initialLocalState: CanvasLocalState = {
   reviewedIds: [],
 }
 
+const refreshIntervalMs = 5 * 60 * 1000
+
 export function useCanvasTasks() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [events, setEvents] = useState<CanvasCalendarEvent[]>([])
   const [status, setStatus] = useState<CanvasStatus>('idle')
+  const refreshRequestId = useRef(0)
+  const [accessKey, setAccessKey] = useState(() => readStorage('canvas-read-key', ''))
   const [localState, setLocalState] = useState<CanvasLocalState>(() =>
     readStorage('canvas-state', initialLocalState),
   )
@@ -31,26 +36,60 @@ export function useCanvasTasks() {
   }, [localState])
 
   const refresh = useCallback(async () => {
+    const requestId = ++refreshRequestId.current
     setStatus('loading')
     try {
-      const startDate = todayISO()
-      const endDate = addDaysISO(60)
-      const [assignments, events] = await Promise.all([
-        fetchCanvasAssignments(startDate, endDate),
-        fetchCanvasEvents(startDate, endDate),
-      ])
-      const mapped = [...assignments, ...events]
+      const startDate = addDaysISO(-30)
+      const endDate = addDaysISO(366)
+      const nextEvents = await fetchCanvasCalendar(startDate, endDate, accessKey)
+      if (requestId !== refreshRequestId.current) return
+      setEvents(nextEvents)
+      setStatus(nextEvents.length ? 'ready' : 'empty')
+    } catch (error) {
+      if (requestId !== refreshRequestId.current) return
+      setStatus(error instanceof Error && error.name === 'missing-token'
+        ? 'missing-token'
+        : error instanceof Error && error.name === 'canvas-access-required'
+          ? 'access-required'
+          : 'error')
+    }
+  }, [accessKey])
+
+  const saveAccessKey = (value: string) => {
+    const next = value.trim()
+    writeStorage('canvas-read-key', next)
+    setAccessKey(next)
+  }
+
+  useEffect(() => {
+    refresh()
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh()
+    }, refreshIntervalMs)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [refresh])
+
+  const tasks = useMemo(() => {
+    const startDate = addDaysISO(-30)
+    const endDate = addDaysISO(366)
+    return events
         .map((item): Task => {
           const canvasId = String(item.assignment?.id ?? item.id)
-          const startAt = item.assignment?.due_at ?? item.start_at ?? item.end_at ?? startDate
-          const due = startAt.slice(0, 10)
-          const time = startAt.includes('T') ? startAt.slice(11, 16) : ''
+          const startAt = item.assignment?.due_at ?? item.start_at ?? item.end_at ?? todayISO()
+          const due = canvasLocalDue(startAt)
           return {
             id: `canvas-${canvasId}`,
             title: item.assignment?.name ?? item.title ?? 'Actividad de Canvas',
             description: item.context_name ?? '',
-            dueDate: due,
-            dueTime: time,
+            dueDate: due.date,
+            dueTime: due.time,
             listId: 'canvas',
             color: canvasColor,
             completed: reviewedSet.has(`canvas-${canvasId}`),
@@ -65,30 +104,14 @@ export function useCanvasTasks() {
             updatedAt: new Date().toISOString(),
           }
         })
-        .filter((task) => !hiddenSet.has(task.id))
-
-      setTasks(mapped)
-      setStatus(mapped.length ? 'ready' : 'empty')
-    } catch (error) {
-      setTasks([])
-      setStatus(error instanceof Error && error.name === 'missing-token' ? 'missing-token' : 'error')
-    }
-  }, [hiddenSet, reviewedSet])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+        .filter((task) => task.dueDate >= startDate && task.dueDate <= endDate && !hiddenSet.has(task.id))
+  }, [events, hiddenSet, reviewedSet])
 
   const markReviewed = (id: string) => {
     setLocalState((current) => ({
       ...current,
       reviewedIds: Array.from(new Set([...current.reviewedIds, id])),
     }))
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === id ? { ...task, completed: true, reviewed: true } : task,
-      ),
-    )
   }
 
   const hideTask = (id: string) => {
@@ -96,8 +119,7 @@ export function useCanvasTasks() {
       ...current,
       hiddenIds: Array.from(new Set([...current.hiddenIds, id])),
     }))
-    setTasks((current) => current.filter((task) => task.id !== id))
   }
 
-  return { hideTask, markReviewed, refresh, status, tasks }
+  return { hideTask, markReviewed, refresh, saveAccessKey, status, tasks }
 }

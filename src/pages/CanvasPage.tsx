@@ -1,11 +1,13 @@
 import { TaskCard } from '../components/TaskCard'
-import type { CanvasStatus } from '../types/canvas'
+import { CanvasStatus } from '../components/CanvasStatus'
+import type { CanvasStatus as CanvasStatusValue } from '../types/canvas'
 import type { Task } from '../types/task'
 
 type CanvasPageProps = {
   canvasState: {
     refresh: () => void
-    status: CanvasStatus
+    saveAccessKey: (value: string) => void
+    status: CanvasStatusValue
   }
   tasks: Task[]
   onOpen: (task: Task) => void
@@ -13,7 +15,7 @@ type CanvasPageProps = {
 }
 
 export function CanvasPage({ canvasState, tasks, onOpen, onReview }: CanvasPageProps) {
-  if (canvasState.status === 'loading') {
+  if (canvasState.status === 'loading' && !tasks.length) {
     return (
       <section className="canvas-page">
         <div className="skeleton"></div>
@@ -29,6 +31,11 @@ export function CanvasPage({ canvasState, tasks, onOpen, onReview }: CanvasPageP
         <p className="eyebrow">Sincronización</p>
         <h2>Tareas y eventos de Canvas</h2>
       </div>
+      <CanvasStatus
+        status={canvasState.status}
+        onRefresh={canvasState.refresh}
+        onSaveAccessKey={canvasState.saveAccessKey}
+      />
       {tasks.length ? (
         <div className="canvas-list">
           {tasks.map((task) => (
@@ -44,9 +51,6 @@ export function CanvasPage({ canvasState, tasks, onOpen, onReview }: CanvasPageP
       ) : (
         <div className="empty-state">No hay tareas de Canvas en este rango.</div>
       )}
-      <button type="button" onClick={canvasState.refresh}>
-        Reintentar conexión
-      </button>
     </section>
   )
 }
