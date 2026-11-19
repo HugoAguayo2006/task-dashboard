@@ -8,6 +8,7 @@ type FiltersBarProps = {
   lists: TaskList[]
   showCalendarModes: boolean
   onCalendarModeChange: (mode: CalendarMode) => void
+  onClearFilters: () => void
   onFiltersChange: (filters: TaskFilters) => void
 }
 
@@ -24,6 +25,7 @@ export function FiltersBar({
   lists,
   showCalendarModes,
   onCalendarModeChange,
+  onClearFilters,
   onFiltersChange,
 }: FiltersBarProps) {
   const patch = (updates: Partial<TaskFilters>) => onFiltersChange({ ...filters, ...updates })
@@ -38,6 +40,9 @@ export function FiltersBar({
           value={filters.query}
           onChange={(event) => patch({ query: event.target.value })}
         />
+        <button className="secondary-button filter-clear-button" type="button" onClick={onClearFilters}>
+          Limpiar filtros
+        </button>
         {showCalendarModes ? (
           <div className="segmented-control" aria-label="Modo de calendario">
             {(['month', 'week', 'agenda'] as CalendarMode[]).map((mode) => (

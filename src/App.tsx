@@ -848,6 +848,7 @@ function App() {
             lists={visibleLists}
             showCalendarModes={view === 'calendar'}
             onCalendarModeChange={setCalendarMode}
+            onClearFilters={() => setFilters(initialFilters)}
             onFiltersChange={setFilters}
           />
         ) : null}

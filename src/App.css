@@ -856,6 +856,8 @@ select {
   background-size: 15px 15px, 7px 7px;
 }
 
+.filter-clear-button { flex: 0 0 auto; white-space: nowrap; }
+
 .filter-control-row,
 .today-filter-controls { flex-wrap: wrap; gap: var(--space-2); }
 .filter-control-row select,
@@ -1437,6 +1439,7 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
   .today-filter-main { align-items: stretch; flex-direction: column; }
   .filters-bar input[type='search'],
   .today-filter-main input[type='search'] { min-width: 0; }
+  .filter-clear-button { width: 100%; }
   .segmented-control { width: 100%; }
   .segmented-control button { min-width: 0; }
   .filter-control-row select,
