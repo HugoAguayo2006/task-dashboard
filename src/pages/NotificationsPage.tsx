@@ -71,8 +71,8 @@ export function NotificationsPage({
                     <strong>{notification.title}</strong>
                     <span>{notification.body}</span>
                     <span className="notification-inbox-details">
-                      <small>Último aviso: {formatNotificationDate(notification.createdAt)}</small>
-                      <small>Recibida: {notification.groupedIds.length} {notification.groupedIds.length === 1 ? 'vez' : 'veces'}</small>
+                      <small>Último aviso: {formatNotificationDate(notification.lastArrivedAt)}</small>
+                      <small>Recibida: {notification.arrivalCount} {notification.arrivalCount === 1 ? 'vez' : 'veces'}</small>
                       <small>Fecha límite: {formatDeadline(task)}</small>
                     </span>
                   </span>
