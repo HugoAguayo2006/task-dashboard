@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { readStorage, writeStorage } from '../services/storageService'
 import type { AppNotification } from '../types/notification'
+import { completeNotificationsForTasks } from '../utils/notifications'
 
 function notificationTimestamp(notification: AppNotification) {
   const parsed = Date.parse(notification.updatedAt || notification.createdAt)
@@ -59,6 +60,11 @@ export function useNotifications() {
     ))
   }, [])
 
+  const completeForTasks = useCallback((taskIds: ReadonlySet<string>) => {
+    const completedAt = new Date().toISOString()
+    setNotifications((current) => completeNotificationsForTasks(current, taskIds, completedAt))
+  }, [])
+
   const replaceNotifications = useCallback((nextNotifications: AppNotification[]) => {
     setNotifications(nextNotifications)
   }, [])
@@ -66,6 +72,7 @@ export function useNotifications() {
   return {
     notifications,
     addNotifications,
+    completeForTasks,
     completeNotification,
     replaceNotifications,
   }

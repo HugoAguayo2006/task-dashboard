@@ -129,6 +129,7 @@ function App() {
   const {
     notifications: inboxNotifications,
     addNotifications,
+    completeForTasks,
     completeNotification,
     replaceNotifications,
   } = useNotifications()
@@ -409,6 +410,18 @@ function App() {
     () => [...tasksState.tasks, ...canvasState.tasks, ...externalCalendarState.tasks],
     [canvasState.tasks, externalCalendarState.tasks, tasksState.tasks],
   )
+
+  useEffect(() => {
+    const completedTaskIds = new Set(allTasks.filter((task) => task.completed).map((task) => task.id))
+    if (!completedTaskIds.size) return
+
+    completeForTasks(completedTaskIds)
+    setInAppNotifications((current) => current.some((notification) =>
+      notification.taskId && completedTaskIds.has(notification.taskId),
+    )
+      ? current.filter((notification) => !notification.taskId || !completedTaskIds.has(notification.taskId))
+      : current)
+  }, [allTasks, completeForTasks, inboxNotifications])
 
   const visibleLists = useMemo(
     () => listsState.lists.filter((list) => !list.hidden),

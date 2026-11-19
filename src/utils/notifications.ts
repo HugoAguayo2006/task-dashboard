@@ -47,3 +47,21 @@ export function getVisibleNotifications(notifications: AppNotification[]): Visib
 
   return [...grouped.values()]
 }
+
+export function completeNotificationsForTasks(
+  notifications: AppNotification[],
+  taskIds: ReadonlySet<string>,
+  completedAt: string,
+): AppNotification[] {
+  let changed = false
+  const nextNotifications = notifications.map((notification) => {
+    if (notification.completed || !notification.taskId || !taskIds.has(notification.taskId)) {
+      return notification
+    }
+
+    changed = true
+    return { ...notification, completed: true, completedAt, updatedAt: completedAt }
+  })
+
+  return changed ? nextNotifications : notifications
+}
