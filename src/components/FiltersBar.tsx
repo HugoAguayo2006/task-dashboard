@@ -65,7 +65,7 @@ export function FiltersBar({
           value={filters.status}
           onChange={(event) => patch({ status: event.target.value as TaskFilters['status'] })}
         >
-          <option value="all">Todo estado</option>
+          <option value="all">Todos los estados</option>
           <option value="pending">Pendientes</option>
           <option value="completed">Completadas</option>
         </select>

@@ -146,7 +146,7 @@ export function TodayPage({
             value={filters.status}
             onChange={(event) => patch({ status: event.target.value as TodayFilters['status'] })}
           >
-            <option value="all">Todo estado</option>
+            <option value="all">Todos los estados</option>
             <option value="pending">Pendientes</option>
             <option value="completed">Completadas</option>
           </select>
