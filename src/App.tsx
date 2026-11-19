@@ -907,6 +907,7 @@ function App() {
 
           <Route path="/notificaciones" element={<NotificationsPage
             notifications={inboxNotifications}
+            tasks={allTasks}
             onComplete={handleCompleteNotification}
             onOpenTask={(taskId) => {
               if (allTasks.some((task) => task.id === taskId)) setSelectedTaskId(taskId)

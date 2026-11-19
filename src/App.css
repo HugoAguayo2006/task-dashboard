@@ -727,7 +727,7 @@ select {
   white-space: nowrap;
 }
 
-.notification-inbox-copy > span {
+.notification-inbox-copy > span:not(.notification-inbox-details) {
   margin-top: 3px;
   overflow: hidden;
   color: var(--text-secondary);
@@ -735,8 +735,14 @@ select {
   white-space: nowrap;
 }
 
-.notification-inbox-copy small {
-  margin-top: 6px;
+.notification-inbox-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-3);
+  margin-top: 8px;
+}
+
+.notification-inbox-details small {
   color: var(--text-tertiary);
   font-size: var(--font-caption);
 }
