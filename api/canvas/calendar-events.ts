@@ -143,7 +143,6 @@ export function parseCanvasIcal(text: string, baseUrl?: string) {
 
 type VercelRequest = {
   query: Record<string, string | string[] | undefined>
-  headers?: Record<string, string | string[] | undefined>
 }
 
 type VercelResponse = {
@@ -204,16 +203,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
   try {
     if (feedUrl) {
-      const readKey = process.env.CANVAS_READ_KEY?.trim()
-      if (!readKey) {
-        response.status(503).json({ code: 'missing-access-key', error: 'Falta configurar CANVAS_READ_KEY en el servidor.' })
-        return
-      }
-      const suppliedKey = first(request.headers?.['x-canvas-key']) ?? first(request.headers?.['X-Canvas-Key'])
-      if (suppliedKey !== readKey) {
-        response.status(401).json({ code: 'canvas-access-required', error: 'Introduce el código de acceso de Canvas.' })
-        return
-      }
       const feedResponse = await fetch(feedUrl, { headers: { Accept: 'text/calendar,text/plain' } })
       if (!feedResponse.ok) throw new Error(`Canvas iCal: ${feedResponse.status}`)
       const entries = parseCanvasIcal(await feedResponse.text(), feedUrl.origin)

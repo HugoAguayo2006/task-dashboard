@@ -56,10 +56,9 @@ La opcion recomendada no requiere token. En Canvas abre **Calendario → Calenda
 
 ```bash
 CANVAS_ICAL_URL=webcal://experiencia21.tec.mx/feeds/calendars/user_....ics
-CANVAS_READ_KEY=un_codigo_aleatorio_largo
 ```
 
-En local, agrega ambas variables a `.env.local` y ejecuta `npm run dev:vercel`. Introduce `CANVAS_READ_KEY` una sola vez en la seccion Canvas de Chalendar en cada dispositivo; se guarda localmente. La app consulta el feed desde el servidor al abrirse, cada cinco minutos mientras este visible y al volver a la pestana. Los eventos aparecen en la seccion Canvas y en el calendario. Los dos valores privados deben permanecer fuera de Git y de las variables `VITE_*`.
+En local, agrega `CANVAS_ICAL_URL` a `.env.local` y ejecuta `npm run dev:vercel`. La app consulta el feed desde el servidor al abrirse, cada cinco minutos mientras este visible y al volver a la pestana. Los eventos aparecen en la seccion Canvas y en el calendario. El enlace del feed permanece en el servidor, fuera de Git y de las variables `VITE_*`. Las tareas y eventos que devuelve `/api/canvas/calendar-events` son publicos para quien conozca la URL del dashboard.
 
 El feed de Canvas incluye entregas y eventos del calendario, pero no los elementos **To Do**. Canvas limita la exportacion a 1,000 elementos, desde 30 dias atras hasta 366 dias en el futuro. Al inscribirte en un curso nuevo, revisa el enlace de suscripcion: Canvas indica que puede ser necesario volver a importarlo. La app no puede detectar si ya entregaste una tarea; el boton de revision solo cambia su estado en Chalendar.
 

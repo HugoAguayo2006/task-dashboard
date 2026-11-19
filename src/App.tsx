@@ -797,7 +797,6 @@ function App() {
                       <CanvasStatus
                         status={canvasState.status}
                         onRefresh={canvasState.refresh}
-                        onSaveAccessKey={canvasState.saveAccessKey}
                       />
                       <ExternalCalendarStatus
                         status={externalCalendarState.status}

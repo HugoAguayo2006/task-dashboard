@@ -30,7 +30,6 @@ END:VCALENDAR\r
 const originalFetch = globalThis.fetch
 const originalFeed = process.env.CANVAS_ICAL_URL
 const originalToken = process.env.CANVAS_ACCESS_TOKEN
-const originalReadKey = process.env.CANVAS_READ_KEY
 
 afterEach(() => {
   globalThis.fetch = originalFetch
@@ -38,8 +37,6 @@ afterEach(() => {
   else process.env.CANVAS_ICAL_URL = originalFeed
   if (originalToken === undefined) delete process.env.CANVAS_ACCESS_TOKEN
   else process.env.CANVAS_ACCESS_TOKEN = originalToken
-  if (originalReadKey === undefined) delete process.env.CANVAS_READ_KEY
-  else process.env.CANVAS_READ_KEY = originalReadKey
 })
 
 function makeResponse() {
@@ -75,7 +72,6 @@ test('shows UTC deadlines on the correct local day', () => {
 
 test('uses one private iCal fetch for both Canvas categories', async () => {
   process.env.CANVAS_ICAL_URL = 'webcal://experiencia21.tec.mx/feeds/calendars/user_example.ics'
-  process.env.CANVAS_READ_KEY = 'test-read-key'
   delete process.env.CANVAS_ACCESS_TOKEN
   const calls = []
   globalThis.fetch = async (url) => {
@@ -83,7 +79,7 @@ test('uses one private iCal fetch for both Canvas categories', async () => {
     return { ok: true, text: async () => sample }
   }
   const response = makeResponse()
-  await handler({ query: { type: 'all', start_date: '2026-11-18', end_date: '2026-11-21' }, headers: { 'x-canvas-key': 'test-read-key' } }, response)
+  await handler({ query: { type: 'all', start_date: '2026-11-18', end_date: '2026-11-21' } }, response)
   assert.equal(response.code, 200)
   assert.equal(response.body.events.length, 2)
   assert.deepEqual(calls, ['https://experiencia21.tec.mx/feeds/calendars/user_example.ics'])
@@ -91,21 +87,9 @@ test('uses one private iCal fetch for both Canvas categories', async () => {
 
 test('rejects invalid feed data instead of displaying an empty calendar', async () => {
   process.env.CANVAS_ICAL_URL = 'https://experiencia21.tec.mx/feeds/calendars/user_example.ics'
-  process.env.CANVAS_READ_KEY = 'test-read-key'
   globalThis.fetch = async () => ({ ok: true, text: async () => '<html>Sign in</html>' })
   const response = makeResponse()
-  await handler({ query: { type: 'all' }, headers: { 'x-canvas-key': 'test-read-key' } }, response)
+  await handler({ query: { type: 'all' } }, response)
   assert.equal(response.code, 502)
   assert.equal(response.body.code, 'canvas-error')
-})
-
-test('does not fetch or return the private feed without the access key', async () => {
-  process.env.CANVAS_ICAL_URL = 'https://experiencia21.tec.mx/feeds/calendars/user_example.ics'
-  process.env.CANVAS_READ_KEY = 'test-read-key'
-  globalThis.fetch = async () => { throw new Error('The feed must not be fetched') }
-  const response = makeResponse()
-  await handler({ query: { type: 'all' } }, response)
-  assert.equal(response.code, 401)
-  assert.equal(response.body.code, 'canvas-access-required')
-  assert.equal(response.body.events, undefined)
 })

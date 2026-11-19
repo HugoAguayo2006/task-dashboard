@@ -6,11 +6,9 @@ type CanvasResponse = {
   code?: string
 }
 
-export async function fetchCanvasCalendar(startDate: string, endDate: string, accessKey: string) {
+export async function fetchCanvasCalendar(startDate: string, endDate: string) {
   const params = new URLSearchParams({ type: 'all', start_date: startDate, end_date: endDate })
-  const response = await fetch(`/api/canvas/calendar-events?${params.toString()}`, {
-    headers: accessKey ? { 'X-Canvas-Key': accessKey } : {},
-  })
+  const response = await fetch(`/api/canvas/calendar-events?${params.toString()}`)
   const data = (await response.json().catch(() => ({}))) as CanvasResponse
 
   if (!response.ok) {

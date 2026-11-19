@@ -23,7 +23,6 @@ export function useCanvasTasks() {
   const [events, setEvents] = useState<CanvasCalendarEvent[]>([])
   const [status, setStatus] = useState<CanvasStatus>('idle')
   const refreshRequestId = useRef(0)
-  const [accessKey, setAccessKey] = useState(() => readStorage('canvas-read-key', ''))
   const [localState, setLocalState] = useState<CanvasLocalState>(() =>
     readStorage('canvas-state', initialLocalState),
   )
@@ -35,31 +34,27 @@ export function useCanvasTasks() {
     writeStorage('canvas-state', localState)
   }, [localState])
 
+  useEffect(() => {
+    try {
+      window.localStorage.removeItem('chalendar:canvas-read-key')
+    } catch { /* Storage may be unavailable in private browsing. */ }
+  }, [])
+
   const refresh = useCallback(async () => {
     const requestId = ++refreshRequestId.current
     setStatus('loading')
     try {
       const startDate = addDaysISO(-30)
       const endDate = addDaysISO(366)
-      const nextEvents = await fetchCanvasCalendar(startDate, endDate, accessKey)
+      const nextEvents = await fetchCanvasCalendar(startDate, endDate)
       if (requestId !== refreshRequestId.current) return
       setEvents(nextEvents)
       setStatus(nextEvents.length ? 'ready' : 'empty')
     } catch (error) {
       if (requestId !== refreshRequestId.current) return
-      setStatus(error instanceof Error && error.name === 'missing-token'
-        ? 'missing-token'
-        : error instanceof Error && error.name === 'canvas-access-required'
-          ? 'access-required'
-          : 'error')
+      setStatus(error instanceof Error && error.name === 'missing-token' ? 'missing-token' : 'error')
     }
-  }, [accessKey])
-
-  const saveAccessKey = (value: string) => {
-    const next = value.trim()
-    writeStorage('canvas-read-key', next)
-    setAccessKey(next)
-  }
+  }, [])
 
   useEffect(() => {
     refresh()
@@ -121,5 +116,5 @@ export function useCanvasTasks() {
     }))
   }
 
-  return { hideTask, markReviewed, refresh, saveAccessKey, status, tasks }
+  return { hideTask, markReviewed, refresh, status, tasks }
 }

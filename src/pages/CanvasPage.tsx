@@ -6,7 +6,6 @@ import type { Task } from '../types/task'
 type CanvasPageProps = {
   canvasState: {
     refresh: () => void
-    saveAccessKey: (value: string) => void
     status: CanvasStatusValue
   }
   tasks: Task[]
@@ -34,7 +33,6 @@ export function CanvasPage({ canvasState, tasks, onOpen, onReview }: CanvasPageP
       <CanvasStatus
         status={canvasState.status}
         onRefresh={canvasState.refresh}
-        onSaveAccessKey={canvasState.saveAccessKey}
       />
       {tasks.length ? (
         <div className="canvas-list">

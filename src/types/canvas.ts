@@ -20,6 +20,5 @@ export type CanvasStatus =
   | 'loading'
   | 'ready'
   | 'missing-token'
-  | 'access-required'
   | 'empty'
   | 'error'

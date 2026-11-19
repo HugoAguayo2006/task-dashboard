@@ -19,8 +19,7 @@ Esa funcion serverless puede leer el feed iCal desde el servidor sin necesitar t
 1. Entra a Canvas Tec y abre **Calendario**.
 2. Selecciona **Calendar Feed** o **Fuente del calendario** y copia el enlace de suscripcion.
 3. Guarda el enlace como variable privada `CANVAS_ICAL_URL` en Vercel y en `.env.local` si haces pruebas locales. Admite enlaces `webcal://` y `https://`.
-4. Genera un codigo largo y guardalo como variable privada `CANVAS_READ_KEY` en Vercel y `.env.local`. La seccion Canvas de Chalendar te pedira ese codigo una sola vez en cada dispositivo.
-5. Ejecuta `npm run dev:vercel` en local o abre el despliegue. Chalendar actualiza Canvas al abrir la pagina, cada cinco minutos mientras esta visible y al volver a la pestana.
+4. Ejecuta `npm run dev:vercel` en local o abre el despliegue. Chalendar actualiza Canvas al abrir la pagina, cada cinco minutos mientras esta visible y al volver a la pestana.
 
 No compartas el enlace ni lo agregues a Git: permite leer tu calendario. Esta via muestra entregas y eventos con fecha, pero no los elementos **To Do** ni el estado de entrega. El marcado como revisado se guarda solo en Chalendar.
 
