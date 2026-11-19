@@ -12,7 +12,7 @@ type FiltersBarProps = {
 }
 
 const priorities: Array<{ value: 'all' | TaskPriority; label: string }> = [
-  { value: 'all', label: 'Prioridad' },
+  { value: 'all', label: 'Todas las prioridades' },
   { value: 'high', label: 'Alta' },
   { value: 'medium', label: 'Media' },
   { value: 'low', label: 'Baja' },
