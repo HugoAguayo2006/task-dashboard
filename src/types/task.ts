@@ -61,7 +61,7 @@ export type TaskDraft = {
 
 export type TaskFilters = {
   query: string
-  listId: string
+  listIds: string[]
   source: 'all' | TaskSource
   status: 'all' | 'pending' | 'completed'
   priority: 'all' | TaskPriority

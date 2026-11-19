@@ -100,7 +100,7 @@ export function sortTasksByDueDate(tasks: Task[]) {
 export function filterTasks(tasks: Task[], filters: TaskFilters) {
   const search = filters.query.trim().toLowerCase()
   return tasks.filter((task) => {
-    if (filters.listId !== 'all' && task.listId !== filters.listId) return false
+    if (filters.listIds.length && !filters.listIds.includes(task.listId)) return false
     if (filters.source !== 'all' && task.source !== filters.source) return false
     if (filters.priority !== 'all' && task.priority !== filters.priority) return false
     if (filters.status === 'pending' && task.completed) return false

@@ -36,7 +36,7 @@ import {
 
 const initialFilters: TaskFilters = {
   query: '',
-  listId: 'all',
+  listIds: [],
   source: 'all',
   status: 'pending',
   priority: 'all',
@@ -373,7 +373,7 @@ function App() {
   useLayoutEffect(() => {
     workspaceRef.current?.scrollTo({ left: 0, top: 0 })
     window.scrollTo({ left: 0, top: 0 })
-  }, [calendarMode, filters.listId, view])
+  }, [calendarMode, filters.listIds, view])
 
   useEffect(() => {
     if (!syncReady.current || syncDisabled.current) return
@@ -434,11 +434,14 @@ function App() {
   const pendingNotificationCount = getVisibleNotifications(inboxNotifications).length
 
   useEffect(() => {
-    const hiddenListIds = new Set(listsState.lists.filter((list) => list.hidden).map((list) => list.id))
-    if (!hiddenListIds.size) return
-    setFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
-    setTodayFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
-    setTomorrowFilters((current) => hiddenListIds.has(current.listId) ? { ...current, listId: 'all' } : current)
+    const availableListIds = new Set(listsState.lists.filter((list) => !list.hidden).map((list) => list.id))
+    const visibleSelection = (listIds: string[]) => listIds.filter((id) => availableListIds.has(id))
+    setFilters((current) => current.listIds.some((id) => !availableListIds.has(id))
+      ? { ...current, listIds: visibleSelection(current.listIds) } : current)
+    setTodayFilters((current) => current.listIds.some((id) => !availableListIds.has(id))
+      ? { ...current, listIds: visibleSelection(current.listIds) } : current)
+    setTomorrowFilters((current) => current.listIds.some((id) => !availableListIds.has(id))
+      ? { ...current, listIds: visibleSelection(current.listIds) } : current)
   }, [listsState.lists])
 
   useEffect(() => {
@@ -509,25 +512,17 @@ function App() {
     [allTasks, selectedTaskId],
   )
 
-  const boardTasks = useMemo(
-    () =>
-      sortTasksByDueDate(
-        filterTasks(visibleTasks, {
-          ...filters,
-          status: 'all',
-        }),
-      ),
+  const filteredTasks = useMemo(
+    () => sortTasksByDueDate(filterTasks(visibleTasks, filters)),
     [visibleTasks, filters],
   )
 
-  const calendarTasks = useMemo(
-    () => sortTasksByDueDate(filterTasks(visibleTasks, { ...filters, status: 'all' })),
-    [visibleTasks, filters],
+  const selectedList = filters.listIds.length === 1
+    ? listsState.lists.find((list) => list.id === filters.listIds[0]) ?? null
+    : null
+  const boardLists = visibleLists.filter((list) =>
+    !filters.listIds.length || filters.listIds.includes(list.id),
   )
-
-  const selectedList = filters.listId === 'all'
-    ? null
-    : listsState.lists.find((list) => list.id === filters.listId) ?? null
 
   const syncManualTasks = async (nextTasks: Task[]) => {
     const content = { ...currentSyncContent, tasks: nextTasks }
@@ -724,7 +719,7 @@ function App() {
         }}
         onDeleteList={listsState.deleteList}
         onSelectList={(listId) => {
-          setFilters((current) => ({ ...current, listId }))
+          setFilters((current) => ({ ...current, listIds: [listId] }))
           setSidebarOpen(false)
         }}
         onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
@@ -860,10 +855,9 @@ function App() {
         <Routes>
           <Route path="/" element={<LegacyViewRedirect />} />
           <Route path="/listas" element={<Dashboard
-            lists={visibleLists}
-            tasks={boardTasks}
-            allTasks={visibleTasks}
-            completedOnly={false}
+            lists={boardLists}
+            tasks={filteredTasks}
+            status={filters.status}
             onComplete={handleComplete}
             onEdit={(task) => {
               setEditingTask(task)
@@ -912,7 +906,7 @@ function App() {
 
           <Route path="/calendario" element={<CalendarPage
             calendarMode={calendarMode}
-            tasks={calendarTasks}
+            tasks={filteredTasks}
             onComplete={handleComplete}
             onMoveTask={handleMoveTask}
             onOpenTask={(task) => setSelectedTaskId(task.id)}

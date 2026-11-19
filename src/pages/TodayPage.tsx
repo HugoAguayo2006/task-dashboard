@@ -5,6 +5,7 @@ import type { Task, TaskFilters, TaskPriority } from '../types/task'
 import { addDaysISO, filterTasks, sortTasksByDueDate, todayISO } from '../utils/dates'
 import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
 import { Icon, type IconName } from '../components/Icon'
+import { ListFilter } from '../components/ListFilter'
 
 export type TodayDateScope = 'focus' | 'today' | 'overdue' | 'upcoming' | 'all'
 
@@ -33,7 +34,7 @@ const priorities: Array<{ value: 'all' | TaskPriority; label: string }> = [
 
 const defaultTodayFilters: TodayFilters = {
   query: '',
-  listId: 'all',
+  listIds: [],
   source: 'all',
   status: 'all',
   priority: 'all',
@@ -67,15 +68,15 @@ export function TodayPage({
   const today = todayISO()
   const targetDate = day === 'tomorrow' ? addDaysISO(1) : today
   const isTomorrow = day === 'tomorrow'
+  const summaryTasks = useMemo(() => filterTasks(tasks, filters), [tasks, filters])
 
   const filteredTasks = useMemo(() => {
-    const baseTasks = filterTasks(tasks, filters)
     return sortTasksByDueDate(
-      baseTasks.filter((task) =>
+      summaryTasks.filter((task) =>
         task.dueDate === targetDate || (!isTomorrow && !task.completed && task.dueDate && task.dueDate < today),
       ),
     )
-  }, [filters, isTomorrow, targetDate, tasks, today])
+  }, [isTomorrow, summaryTasks, targetDate, today])
 
   const visibleTasks = getNextTaskPerRecurringSeries(filteredTasks)
   const todayTasks = visibleTasks
@@ -89,8 +90,8 @@ export function TodayPage({
   const overdueTasks = isTomorrow
     ? []
     : visibleTasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today)
-  const pendingTodayTasks = tasks.filter((task) => !task.completed && task.dueDate === targetDate)
-  const completedTodayTasks = tasks.filter((task) => task.completed && task.dueDate === targetDate)
+  const pendingTodayTasks = summaryTasks.filter((task) => !task.completed && task.dueDate === targetDate)
+  const completedTodayTasks = summaryTasks.filter((task) => task.completed && task.dueDate === targetDate)
   const highPriorityTodayTasks = pendingTodayTasks.filter((task) => task.priority === 'high')
 
   return (
@@ -105,7 +106,7 @@ export function TodayPage({
           <p>Alta prioridad</p>
         </div>
         <div>
-          <span>{tasks.filter((task) => task.source === 'canvas' && task.dueDate === targetDate).length}</span>
+          <span>{summaryTasks.filter((task) => task.source === 'canvas' && task.dueDate === targetDate).length}</span>
           <p>Canvas {isTomorrow ? 'mañana' : 'hoy'}</p>
         </div>
         <div>
@@ -135,28 +136,11 @@ export function TodayPage({
         </div>
 
         <div className="today-filter-controls">
-          <select
-            aria-label="Filtrar por lista"
-            value={filters.listId}
-            onChange={(event) => patch({ listId: event.target.value })}
-          >
-            <option value="all">Todas las listas</option>
-            {lists.map((list) => (
-              <option key={list.id} value={list.id}>
-                {list.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar por fuente"
-            value={filters.source}
-            onChange={(event) => patch({ source: event.target.value as TodayFilters['source'] })}
-          >
-            <option value="all">Todas las fuentes</option>
-            <option value="manual">Manual</option>
-            <option value="canvas">Canvas</option>
-            <option value="external-calendar">Calendarios</option>
-          </select>
+          <ListFilter
+            lists={lists}
+            selectedIds={filters.listIds}
+            onChange={(listIds) => patch({ listIds })}
+          />
           <select
             aria-label="Filtrar por estado"
             value={filters.status}

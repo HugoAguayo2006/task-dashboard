@@ -1,5 +1,6 @@
 import type { TaskList } from '../types/list'
 import type { CalendarMode, TaskFilters, TaskPriority } from '../types/task'
+import { ListFilter } from './ListFilter'
 
 type FiltersBarProps = {
   calendarMode: CalendarMode
@@ -54,28 +55,11 @@ export function FiltersBar({
         ) : null}
       </div>
       <div className="filter-control-row">
-        <select
-          aria-label="Filtrar por lista"
-          value={filters.listId}
-          onChange={(event) => patch({ listId: event.target.value })}
-        >
-          <option value="all">Todas las listas</option>
-          {lists.map((list) => (
-            <option key={list.id} value={list.id}>
-              {list.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filtrar por fuente"
-          value={filters.source}
-          onChange={(event) => patch({ source: event.target.value as TaskFilters['source'] })}
-        >
-          <option value="all">Todas</option>
-          <option value="manual">Manual</option>
-          <option value="canvas">Canvas</option>
-          <option value="external-calendar">Calendarios</option>
-        </select>
+        <ListFilter
+          lists={lists}
+          selectedIds={filters.listIds}
+          onChange={(listIds) => patch({ listIds })}
+        />
         <select
           aria-label="Filtrar por estado"
           value={filters.status}

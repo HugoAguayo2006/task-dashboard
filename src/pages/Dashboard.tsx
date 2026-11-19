@@ -1,16 +1,15 @@
 import { useState, type CSSProperties, type DragEvent } from 'react'
 import { TaskCard } from '../components/TaskCard'
 import type { TaskList } from '../types/list'
-import type { Task } from '../types/task'
+import type { Task, TaskFilters } from '../types/task'
 import { readableColor, visibleOnDarkColor, visibleOnLightColor } from '../utils/colors'
 import { isOverdue } from '../utils/dates'
 import { countTasksOncePerRecurringSeries, getNextTaskPerRecurringSeries } from '../utils/taskCounts'
 import { Icon } from '../components/Icon'
 
 type DashboardProps = {
-  allTasks: Task[]
-  completedOnly: boolean
   lists: TaskList[]
+  status: TaskFilters['status']
   tasks: Task[]
   onComplete: (task: Task) => void
   onEdit: (task: Task) => void
@@ -19,9 +18,8 @@ type DashboardProps = {
 }
 
 export function Dashboard({
-  allTasks,
-  completedOnly,
   lists,
+  status,
   tasks,
   onComplete,
   onEdit,
@@ -45,15 +43,15 @@ export function Dashboard({
     <>
       <section className="summary-grid">
         <div>
-          <span>{countTasksOncePerRecurringSeries(allTasks.filter((task) => !task.completed))}</span>
+          <span>{countTasksOncePerRecurringSeries(tasks.filter((task) => !task.completed))}</span>
           <p>Pendientes</p>
         </div>
         <div>
-          <span>{countTasksOncePerRecurringSeries(allTasks.filter(isOverdue))}</span>
+          <span>{countTasksOncePerRecurringSeries(tasks.filter(isOverdue))}</span>
           <p>Vencidas</p>
         </div>
         <div>
-          <span>{countTasksOncePerRecurringSeries(allTasks.filter((task) => task.source === 'canvas' && !task.completed))}</span>
+          <span>{countTasksOncePerRecurringSeries(tasks.filter((task) => task.source === 'canvas' && !task.completed))}</span>
           <p>Canvas</p>
         </div>
         <div>
@@ -65,15 +63,13 @@ export function Dashboard({
       <section className="task-columns list-board">
         {lists.map((list) => {
           const listTasks = tasks.filter((task) => task.listId === list.id)
-          const pendingTasks = completedOnly
-            ? []
-            : listTasks.filter((task) => !task.completed)
+          const pendingTasks = listTasks.filter((task) => !task.completed)
           const visiblePendingTasks = getNextTaskPerRecurringSeries(pendingTasks)
           const pendingCount = countTasksOncePerRecurringSeries(pendingTasks)
           const completedTasks = listTasks.filter((task) => task.completed)
           const visibleCompletedTasks = getNextTaskPerRecurringSeries(completedTasks)
           const completedCount = countTasksOncePerRecurringSeries(completedTasks)
-          const completedOpen = completedOnly || expandedCompleted[list.id]
+          const completedOpen = status === 'completed' || Boolean(expandedCompleted[list.id])
           const darkVisibleColor = visibleOnDarkColor(list.color)
           const lightVisibleColor = visibleOnLightColor(list.color)
           const listAccentStyle = {
@@ -111,12 +107,12 @@ export function Dashboard({
                 <span className="list-color" style={listAccentStyle}></span>
                 <div>
                   <h2>{list.name}</h2>
-                  <small>{pendingCount} pendientes · arrastra para ordenar</small>
+                  <small>{status === 'completed' ? `${completedCount} completadas` : `${pendingCount} pendientes`} · arrastra para ordenar</small>
                 </div>
                 <span className="drag-handle" aria-hidden="true"><Icon name="drag" /></span>
               </header>
 
-              <div className="pending-stack">
+              {status !== 'completed' ? <div className="pending-stack">
                 {visiblePendingTasks.length ? (
                   visiblePendingTasks.map((task) => (
                     <TaskCard
@@ -131,22 +127,26 @@ export function Dashboard({
                 ) : (
                   <div className="empty-state">No hay pendientes en esta lista.</div>
                 )}
-              </div>
+              </div> : null}
 
-              <section className={`completed-stack ${completedOpen ? 'is-open' : ''}`}>
-                <button
-                  className="completed-toggle"
-                  type="button"
-                  onClick={() =>
-                    setExpandedCompleted((current) => ({
-                      ...current,
-                      [list.id]: !current[list.id],
-                    }))
-                  }
-                >
-                  <Icon name={completedOpen ? 'chevron-down' : 'chevron-right'} size={17} />
-                  Completadas ({completedCount})
-                </button>
+              {status !== 'pending' ? <section className={`completed-stack ${completedOpen ? 'is-open' : ''}`}>
+                {status === 'completed' ? (
+                  <div className="completed-toggle">Completadas ({completedCount})</div>
+                ) : (
+                  <button
+                    className="completed-toggle"
+                    type="button"
+                    onClick={() =>
+                      setExpandedCompleted((current) => ({
+                        ...current,
+                        [list.id]: !current[list.id],
+                      }))
+                    }
+                  >
+                    <Icon name={completedOpen ? 'chevron-down' : 'chevron-right'} size={17} />
+                    Completadas ({completedCount})
+                  </button>
+                )}
 
                 {completedOpen ? (
                   visibleCompletedTasks.length ? (
@@ -168,7 +168,7 @@ export function Dashboard({
                     {completedCount} completadas ocultas
                   </div>
                 ) : null}
-              </section>
+              </section> : null}
             </article>
           )
         })}
