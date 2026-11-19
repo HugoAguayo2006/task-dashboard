@@ -53,7 +53,7 @@ export function Dashboard({
           <p>Vencidas</p>
         </div>
         <div>
-          <span>{allTasks.filter((task) => task.source === 'canvas').length}</span>
+          <span>{countTasksOncePerRecurringSeries(allTasks.filter((task) => task.source === 'canvas' && !task.completed))}</span>
           <p>Canvas</p>
         </div>
         <div>
