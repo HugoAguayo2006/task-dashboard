@@ -301,8 +301,7 @@ select {
 }
 
 .nav-list,
-.manager-list,
-.canvas-list {
+.manager-list {
   display: grid;
   gap: var(--space-2);
 }

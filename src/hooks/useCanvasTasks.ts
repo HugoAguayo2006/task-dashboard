@@ -102,10 +102,12 @@ export function useCanvasTasks() {
         .filter((task) => task.dueDate >= startDate && task.dueDate <= endDate && !hiddenSet.has(task.id))
   }, [events, hiddenSet, reviewedSet])
 
-  const markReviewed = (id: string) => {
+  const toggleReviewed = (id: string) => {
     setLocalState((current) => ({
       ...current,
-      reviewedIds: Array.from(new Set([...current.reviewedIds, id])),
+      reviewedIds: current.reviewedIds.includes(id)
+        ? current.reviewedIds.filter((reviewedId) => reviewedId !== id)
+        : [...current.reviewedIds, id],
     }))
   }
 
@@ -116,5 +118,5 @@ export function useCanvasTasks() {
     }))
   }
 
-  return { hideTask, markReviewed, refresh, status, tasks }
+  return { hideTask, refresh, status, tasks, toggleReviewed }
 }

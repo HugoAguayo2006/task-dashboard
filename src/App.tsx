@@ -38,7 +38,7 @@ const initialFilters: TaskFilters = {
   query: '',
   listIds: [],
   source: 'all',
-  status: 'pending',
+  status: 'all',
   priority: 'all',
 }
 
@@ -537,7 +537,7 @@ function App() {
 
   const handleComplete = (task: Task) => {
     if (task.source === 'canvas') {
-      canvasState.markReviewed(task.id)
+      canvasState.toggleReviewed(task.id)
       return
     }
     if (task.source === 'external-calendar') {
@@ -928,8 +928,8 @@ function App() {
               source: 'canvas',
               status: filters.status,
             })}
+            onComplete={handleComplete}
             onOpen={(task) => setSelectedTaskId(task.id)}
-            onReview={canvasState.markReviewed}
           />} />
           <Route path="*" element={<Navigate replace to="/hoy" />} />
         </Routes>
