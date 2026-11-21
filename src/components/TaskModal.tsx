@@ -587,8 +587,10 @@ export function TaskModal({
                   Editar tarea
                 </button>
               ) : null}
-              <button className="state-button" disabled={isSavingDetail} type="button" onClick={() => onComplete(task)}>
-                {task.source === 'manual'
+              <button className="state-button" disabled={isSavingDetail || task.canvasSubmitted} type="button" onClick={() => onComplete(task)}>
+                {task.canvasSubmitted
+                  ? 'Entregada en Canvas'
+                  : task.source === 'manual'
                   ? 'Cambiar estado'
                   : task.completed
                     ? 'Marcar pendiente'

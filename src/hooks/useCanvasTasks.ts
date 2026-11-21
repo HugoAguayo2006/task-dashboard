@@ -18,6 +18,26 @@ const initialLocalState: CanvasLocalState = {
 }
 
 const refreshIntervalMs = 5 * 60 * 1000
+const submissionsStorageKey = 'chalendar:canvas-submissions'
+
+type CanvasSubmissions = { ids: string[]; syncedAt: string }
+
+function readCanvasSubmissions(): CanvasSubmissions {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(submissionsStorageKey) || 'null')
+    if (value && typeof value === 'object' && 'ids' in value && Array.isArray(value.ids)) {
+      return {
+        ids: value.ids.filter((id): id is string => typeof id === 'string' && /^\d+$/.test(id)),
+        syncedAt: 'syncedAt' in value && typeof value.syncedAt === 'string' ? value.syncedAt : '',
+      }
+    }
+  } catch { /* Ignore malformed extension data or unavailable storage. */ }
+  return { ids: [], syncedAt: '' }
+}
+
+function assignmentIdFromCalendarId(value: string) {
+  return /^\d+$/.test(value) ? value : /^event-assignment-(\d+)$/.exec(value)?.[1]
+}
 
 export function useCanvasTasks() {
   const [events, setEvents] = useState<CanvasCalendarEvent[]>([])
@@ -26,9 +46,21 @@ export function useCanvasTasks() {
   const [localState, setLocalState] = useState<CanvasLocalState>(() =>
     readStorage('canvas-state', initialLocalState),
   )
+  const [submissions, setSubmissions] = useState<CanvasSubmissions>(readCanvasSubmissions)
 
   const hiddenSet = useMemo(() => new Set(localState.hiddenIds), [localState.hiddenIds])
   const reviewedSet = useMemo(() => new Set(localState.reviewedIds), [localState.reviewedIds])
+  const submittedSet = useMemo(() => new Set(submissions.ids), [submissions.ids])
+
+  useEffect(() => {
+    const update = () => setSubmissions(readCanvasSubmissions())
+    window.addEventListener('chalendar:canvas-submissions-updated', update)
+    window.addEventListener('storage', update)
+    return () => {
+      window.removeEventListener('chalendar:canvas-submissions-updated', update)
+      window.removeEventListener('storage', update)
+    }
+  }, [])
 
   useEffect(() => {
     writeStorage('canvas-state', localState)
@@ -77,6 +109,7 @@ export function useCanvasTasks() {
     return events
         .map((item): Task => {
           const canvasId = String(item.assignment?.id ?? item.id)
+          const submitted = submittedSet.has(assignmentIdFromCalendarId(canvasId) ?? '')
           const startAt = item.assignment?.due_at ?? item.start_at ?? item.end_at ?? todayISO()
           const due = canvasLocalDue(startAt)
           return {
@@ -87,11 +120,12 @@ export function useCanvasTasks() {
             dueTime: due.time,
             listId: 'canvas',
             color: canvasColor,
-            completed: reviewedSet.has(`canvas-${canvasId}`),
+            completed: submitted || reviewedSet.has(`canvas-${canvasId}`),
             priority: 'medium',
             tags: ['Canvas'],
             source: 'canvas',
             canvasId,
+            canvasSubmitted: submitted,
             canvasUrl: item.assignment?.html_url ?? item.html_url,
             reviewed: reviewedSet.has(`canvas-${canvasId}`),
             contextName: item.context_name,
@@ -100,9 +134,10 @@ export function useCanvasTasks() {
           }
         })
         .filter((task) => task.dueDate >= startDate && task.dueDate <= endDate && !hiddenSet.has(task.id))
-  }, [events, hiddenSet, reviewedSet])
+  }, [events, hiddenSet, reviewedSet, submittedSet])
 
   const toggleReviewed = (id: string) => {
+    if (submittedSet.has(assignmentIdFromCalendarId(id.replace(/^canvas-/, '')) ?? '')) return
     setLocalState((current) => ({
       ...current,
       reviewedIds: current.reviewedIds.includes(id)

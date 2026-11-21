@@ -60,7 +60,7 @@ CANVAS_ICAL_URL=webcal://experiencia21.tec.mx/feeds/calendars/user_....ics
 
 En local, agrega `CANVAS_ICAL_URL` a `.env.local` y ejecuta `npm run dev:vercel`. La app consulta el feed desde el servidor al abrirse, cada cinco minutos mientras este visible y al volver a la pestana. Los eventos aparecen en la seccion Canvas y en el calendario. El enlace del feed permanece en el servidor, fuera de Git y de las variables `VITE_*`. Las tareas y eventos que devuelve `/api/canvas/calendar-events` son publicos para quien conozca la URL del dashboard.
 
-El feed de Canvas incluye entregas y eventos del calendario, pero no los elementos **To Do**. Canvas limita la exportacion a 1,000 elementos, desde 30 dias atras hasta 366 dias en el futuro. Al inscribirte en un curso nuevo, revisa el enlace de suscripcion: Canvas indica que puede ser necesario volver a importarlo. La app no puede detectar si ya entregaste una tarea; el boton de revision solo cambia su estado en Chalendar.
+El feed de Canvas incluye entregas y eventos del calendario, pero no los elementos **To Do** ni el estado de entrega. Canvas limita la exportacion a 1,000 elementos, desde 30 dias atras hasta 366 dias en el futuro. Al inscribirte en un curso nuevo, revisa el enlace de suscripcion: Canvas indica que puede ser necesario volver a importarlo. Para marcar automaticamente las tareas entregadas en Canvas, instala la [extension de Chrome](browser-extension/README.md). Sin la extension, el boton de revision solo cambia el estado en Chalendar.
 
 Si el enlace iCal no esta disponible, la integracion anterior mediante API sigue como alternativa. Configura estas variables como privadas en Vercel:
 

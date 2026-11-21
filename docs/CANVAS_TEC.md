@@ -21,7 +21,7 @@ Esa funcion serverless puede leer el feed iCal desde el servidor sin necesitar t
 3. Guarda el enlace como variable privada `CANVAS_ICAL_URL` en Vercel y en `.env.local` si haces pruebas locales. Admite enlaces `webcal://` y `https://`.
 4. Ejecuta `npm run dev:vercel` en local o abre el despliegue. Chalendar actualiza Canvas al abrir la pagina, cada cinco minutos mientras esta visible y al volver a la pestana.
 
-No compartas el enlace ni lo agregues a Git: permite leer tu calendario. Esta via muestra entregas y eventos con fecha, pero no los elementos **To Do** ni el estado de entrega. El marcado como revisado se guarda solo en Chalendar.
+No compartas el enlace ni lo agregues a Git: permite leer tu calendario. Esta via muestra entregas y eventos con fecha, pero no los elementos **To Do** ni el estado de entrega. Para detectar automaticamente lo que ya entregaste, instala la [extension de Chrome](../browser-extension/README.md). Sin ella, el marcado como revisado se guarda solo en Chalendar.
 
 ## Alternativa: cuando tengas el token
 

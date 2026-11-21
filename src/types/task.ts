@@ -30,6 +30,7 @@ export type Task = {
   source: TaskSource
   canvasId?: string
   canvasUrl?: string
+  canvasSubmitted?: boolean
   externalCalendarId?: string
   externalCalendarName?: string
   recurrenceId?: string

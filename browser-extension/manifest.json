@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Chalendar: entregas de Canvas",
+  "version": "1.0.0",
+  "description": "Marca en Chalendar las tareas que ya entregaste en Canvas.",
+  "permissions": ["storage"],
+  "action": { "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://experiencia21.tec.mx/*"],
+      "js": ["canvas.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://task-dashboard-flame-beta.vercel.app/*", "http://localhost:5173/*", "http://localhost:3000/*"],
+      "js": ["chalendar.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

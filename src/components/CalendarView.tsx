@@ -284,8 +284,10 @@ function CalendarTaskRow({
       }}
     >
       <button
-        aria-label={task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}
+        aria-label={task.canvasSubmitted ? 'Entregada en Canvas' : task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}
         className="calendar-complete"
+        disabled={task.canvasSubmitted}
+        title={task.canvasSubmitted ? 'Esta tarea ya fue entregada en Canvas' : undefined}
         type="button"
         onClick={() => onComplete(task)}
       >

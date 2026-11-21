@@ -35,8 +35,10 @@ export function TaskCard({
       style={taskAccentStyle}
     >
       <button
-        aria-label={task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}
+        aria-label={task.canvasSubmitted ? 'Entregada en Canvas' : task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}
         className="task-check"
+        disabled={task.canvasSubmitted}
+        title={task.canvasSubmitted ? 'Esta tarea ya fue entregada en Canvas' : undefined}
         type="button"
         onClick={() => onComplete(task)}
       >

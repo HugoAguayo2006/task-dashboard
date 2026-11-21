@@ -537,6 +537,7 @@ function App() {
 
   const handleComplete = (task: Task) => {
     if (task.source === 'canvas') {
+      if (task.canvasSubmitted) return
       canvasState.toggleReviewed(task.id)
       return
     }
