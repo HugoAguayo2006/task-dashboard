@@ -862,102 +862,104 @@ function App() {
           </div>
         </header>
 
-        {view !== 'today' && view !== 'tomorrow' && view !== 'notifications' ? (
-          <FiltersBar
-            key={view}
-            calendarMode={calendarMode}
-            filters={filters}
-            lists={visibleLists}
-            showCalendarModes={view === 'calendar'}
-            onCalendarModeChange={setCalendarMode}
-            onClearFilters={() => setFilters(initialFilters)}
-            onFiltersChange={setFilters}
-          />
-        ) : null}
+        <div className="view-content" key={view}>
+          {view !== 'today' && view !== 'tomorrow' && view !== 'notifications' ? (
+            <FiltersBar
+              key={view}
+              calendarMode={calendarMode}
+              filters={filters}
+              lists={visibleLists}
+              showCalendarModes={view === 'calendar'}
+              onCalendarModeChange={setCalendarMode}
+              onClearFilters={() => setFilters(initialFilters)}
+              onFiltersChange={setFilters}
+            />
+          ) : null}
 
-        <Routes>
-          <Route path="/" element={<LegacyViewRedirect />} />
-          <Route path="/listas" element={<Dashboard
-            lists={boardLists}
-            tasks={filteredTasks}
-            status={filters.status}
-            onComplete={handleComplete}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsCreatingTask(true)
-            }}
-            onOpen={(task) => setSelectedTaskId(task.id)}
-            onReorderLists={listsState.reorderLists}
-          />} />
+          <Routes>
+            <Route path="/" element={<LegacyViewRedirect />} />
+            <Route path="/listas" element={<Dashboard
+              lists={boardLists}
+              tasks={filteredTasks}
+              status={filters.status}
+              onComplete={handleComplete}
+              onEdit={(task) => {
+                setEditingTask(task)
+                setIsCreatingTask(true)
+              }}
+              onOpen={(task) => setSelectedTaskId(task.id)}
+              onReorderLists={listsState.reorderLists}
+            />} />
 
-          <Route path="/hoy" element={<TodayPage
-            key="today"
-            filters={todayFilters}
-            lists={visibleLists}
-            tasks={visibleTasks}
-            onComplete={handleComplete}
-            onCreateTodayTask={() => {
-              setNewTaskDueDate(undefined)
-              setEditingTask(null)
-              setIsCreatingTask(true)
-            }}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsCreatingTask(true)
-            }}
-            onFiltersChange={setTodayFilters}
-            onOpen={(task) => setSelectedTaskId(task.id)}
-          />} />
+            <Route path="/hoy" element={<TodayPage
+              key="today"
+              filters={todayFilters}
+              lists={visibleLists}
+              tasks={visibleTasks}
+              onComplete={handleComplete}
+              onCreateTodayTask={() => {
+                setNewTaskDueDate(undefined)
+                setEditingTask(null)
+                setIsCreatingTask(true)
+              }}
+              onEdit={(task) => {
+                setEditingTask(task)
+                setIsCreatingTask(true)
+              }}
+              onFiltersChange={setTodayFilters}
+              onOpen={(task) => setSelectedTaskId(task.id)}
+            />} />
 
-          <Route path="/manana" element={<TodayPage
-            key="tomorrow"
-            day="tomorrow"
-            filters={tomorrowFilters}
-            lists={visibleLists}
-            tasks={visibleTasks}
-            onComplete={handleComplete}
-            onCreateTodayTask={() => {
-              setNewTaskDueDate(addDaysISO(1))
-              setEditingTask(null)
-              setIsCreatingTask(true)
-            }}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsCreatingTask(true)
-            }}
-            onFiltersChange={setTomorrowFilters}
-            onOpen={(task) => setSelectedTaskId(task.id)}
-          />} />
+            <Route path="/manana" element={<TodayPage
+              key="tomorrow"
+              day="tomorrow"
+              filters={tomorrowFilters}
+              lists={visibleLists}
+              tasks={visibleTasks}
+              onComplete={handleComplete}
+              onCreateTodayTask={() => {
+                setNewTaskDueDate(addDaysISO(1))
+                setEditingTask(null)
+                setIsCreatingTask(true)
+              }}
+              onEdit={(task) => {
+                setEditingTask(task)
+                setIsCreatingTask(true)
+              }}
+              onFiltersChange={setTomorrowFilters}
+              onOpen={(task) => setSelectedTaskId(task.id)}
+            />} />
 
-          <Route path="/calendario" element={<CalendarPage
-            calendarMode={calendarMode}
-            tasks={filteredTasks}
-            onComplete={handleComplete}
-            onMoveTask={handleMoveTask}
-            onOpenTask={(task) => setSelectedTaskId(task.id)}
-          />} />
+            <Route path="/calendario" element={<CalendarPage
+              calendarMode={calendarMode}
+              tasks={filteredTasks}
+              onComplete={handleComplete}
+              onMoveTask={handleMoveTask}
+              onOpenTask={(task) => setSelectedTaskId(task.id)}
+            />} />
 
-          <Route path="/notificaciones" element={<NotificationsPage
-            notifications={inboxNotifications}
-            tasks={allTasks}
-            onComplete={handleCompleteNotification}
-            onOpenTask={(taskId) => {
-              if (allTasks.some((task) => task.id === taskId)) setSelectedTaskId(taskId)
-            }}
-          />} />
+            <Route path="/notificaciones" element={<NotificationsPage
+              notifications={inboxNotifications}
+              tasks={allTasks}
+              onComplete={handleCompleteNotification}
+              onOpenTask={(taskId) => {
+                if (allTasks.some((task) => task.id === taskId)) setSelectedTaskId(taskId)
+              }}
+            />} />
 
-          <Route path="/canvas" element={<CanvasPage
-            canvasState={canvasState}
-            tasks={filterTasks(visibleTasks, {
-              ...filters,
-              source: 'canvas',
-              status: filters.status,
-            })}
-            onComplete={handleComplete}
-            onOpen={(task) => setSelectedTaskId(task.id)}
-          />} />
-          <Route path="*" element={<Navigate replace to="/hoy" />} />
-        </Routes>
+            <Route path="/canvas" element={<CanvasPage
+              canvasState={canvasState}
+              tasks={filterTasks(visibleTasks, {
+                ...filters,
+                source: 'canvas',
+                status: filters.status,
+              })}
+              onComplete={handleComplete}
+              onOpen={(task) => setSelectedTaskId(task.id)}
+            />} />
+            <Route path="*" element={<Navigate replace to="/hoy" />} />
+          </Routes>
+        </div>
       </main>
 
       {(isCreatingTask || selectedTask) && (
