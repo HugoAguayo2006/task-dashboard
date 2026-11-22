@@ -752,15 +752,19 @@ function App() {
         <header className={`topbar${settingsOpen ? ' settings-open' : ''}`}>
           <div className="topbar-main">
             <button
-              aria-label="Abrir navegación"
-              className="icon-button mobile-only"
+              aria-label={sidebarOpen ? 'Cerrar navegación' : 'Abrir navegación'}
+              aria-controls="navigation-panel"
+              aria-expanded={sidebarOpen}
+              className="icon-button mobile-only mobile-menu-button"
               type="button"
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setSidebarOpen((open) => !open)}
             >
-              <span></span>
-              <span></span>
-              <span></span>
+              <span className="mobile-menu-glyph" aria-hidden="true">
+                <span />
+                <span />
+              </span>
             </button>
+            <img className="topbar-brand-mark" src="/favicon-96x96.png" alt="Chalendar" />
             <div>
               <h1>
                 {view === 'calendar'
@@ -843,6 +847,7 @@ function App() {
               <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>
             </button>
             <button
+              aria-label="Nueva tarea"
               className="primary-button"
               type="button"
               onClick={() => {

@@ -51,7 +51,7 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <>
-      <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
+      <aside className={`sidebar ${open ? 'is-open' : ''} ${collapsed ? 'is-collapsed' : ''}`} id="navigation-panel">
         <div className="sidebar-header">
           <img className="brand-mark" src="/favicon-96x96.png" alt="Chalendar" />
           <div>
