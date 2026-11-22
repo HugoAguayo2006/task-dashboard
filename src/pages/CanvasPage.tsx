@@ -31,7 +31,6 @@ export function CanvasPage({ canvasState, tasks, onComplete, onOpen }: CanvasPag
   return (
     <section className="canvas-page">
       <div className="section-heading">
-        <p className="eyebrow">Sincronización</p>
         <h2>Tareas y eventos de Canvas</h2>
       </div>
       <CanvasStatus

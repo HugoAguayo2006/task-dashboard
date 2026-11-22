@@ -834,17 +834,72 @@ select {
 .status-local { color: var(--orange); background: var(--orange-soft); }
 
 /* Filters ----------------------------------------------------------------- */
-.filters-bar,
-.today-filters {
+.filters-bar { margin-bottom: var(--space-5); }
+
+.filters-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filters-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--separator-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+  font-weight: 600;
+}
+
+.filters-toggle:hover,
+.filters-toggle[aria-expanded='true'] {
+  color: var(--text-strong);
+  background: var(--surface-hover);
+}
+
+.filters-toggle.has-active-filters {
+  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.filters-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  color: white;
+  background: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.filters-toggle-chevron { transition: transform var(--transition-fast); }
+.filters-toggle[aria-expanded='true'] .filters-toggle-chevron { transform: rotate(180deg); }
+
+.filters-panel,
+.today-filters-panel {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
-  margin-bottom: var(--space-5);
   border: 1px solid var(--separator-soft);
   border-radius: var(--radius-lg);
   background: var(--surface-1);
   box-shadow: var(--shadow-card);
 }
+
+.filters-panel { margin-top: var(--space-3); }
+.today-filters-panel { margin-top: var(--space-3); }
 
 .filter-search-row,
 .today-filter-main { justify-content: space-between; gap: var(--space-3); }
@@ -1091,9 +1146,11 @@ button.completed-toggle:hover { color: var(--text); background: var(--surface-ho
 .today-empty { min-height: 100px; display: grid; align-content: center; justify-items: center; gap: var(--space-1); padding: var(--space-6); border: 1px dashed var(--separator); border-radius: var(--radius-md); color: var(--text-tertiary); font-size: var(--font-footnote); text-align: center; }
 
 /* Today ------------------------------------------------------------------- */
-.today-page,
 .today-content,
 .canvas-page { display: grid; gap: var(--space-4); }
+.today-page { display: grid; gap: var(--space-5); }
+.today-page > .filters-bar,
+.today-page > .today-summary-grid { margin-bottom: 0; }
 .today-actions { gap: var(--space-2); }
 .today-group { overflow: hidden; border: 1px solid var(--separator-soft); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-card); }
 .today-group-header { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--separator-soft); }
@@ -1358,6 +1415,7 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
 
 /* Canvas ------------------------------------------------------------------ */
 .canvas-page .section-heading { padding: var(--space-1) 0 var(--space-2); }
+.canvas-page .section-heading h2 { margin: 0; }
 .canvas-page > button { justify-self: start; min-height: 44px; }
 .skeleton { height: 86px; border-radius: var(--radius-md); background: linear-gradient(90deg, var(--surface-soft), var(--surface-hover), var(--surface-soft)); background-size: 220% 100%; animation: shimmer 1.4s infinite linear; }
 
@@ -1445,8 +1503,9 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
   .today-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
   .summary-grid > div,
   .today-summary-grid > div { padding: var(--space-3); border-radius: var(--radius-md); }
-  .filters-bar,
-  .today-filters { padding: var(--space-3); border-radius: var(--radius-md); }
+  .filters-panel,
+  .today-filters-panel { padding: var(--space-3); border-radius: var(--radius-md); }
+  .filters-toolbar .segmented-control { width: 100%; }
   .filter-search-row,
   .today-filter-main { align-items: stretch; flex-direction: column; }
   .filters-bar input[type='search'],

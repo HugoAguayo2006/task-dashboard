@@ -851,7 +851,7 @@ function App() {
               className="primary-button"
               type="button"
               onClick={() => {
-                setNewTaskDueDate(undefined)
+                setNewTaskDueDate(view === 'tomorrow' ? addDaysISO(1) : undefined)
                 setEditingTask(null)
                 setIsCreatingTask(true)
               }}
@@ -864,6 +864,7 @@ function App() {
 
         {view !== 'today' && view !== 'tomorrow' && view !== 'notifications' ? (
           <FiltersBar
+            key={view}
             calendarMode={calendarMode}
             filters={filters}
             lists={visibleLists}
@@ -890,6 +891,7 @@ function App() {
           />} />
 
           <Route path="/hoy" element={<TodayPage
+            key="today"
             filters={todayFilters}
             lists={visibleLists}
             tasks={visibleTasks}
@@ -908,6 +910,7 @@ function App() {
           />} />
 
           <Route path="/manana" element={<TodayPage
+            key="tomorrow"
             day="tomorrow"
             filters={tomorrowFilters}
             lists={visibleLists}

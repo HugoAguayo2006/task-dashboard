@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { TaskCard } from '../components/TaskCard'
 import type { TaskList } from '../types/list'
 import type { Task, TaskFilters, TaskPriority } from '../types/task'
@@ -64,7 +64,14 @@ export function TodayPage({
   onFiltersChange,
   onOpen,
 }: TodayPageProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersPanelId = useId()
   const patch = (updates: Partial<TodayFilters>) => onFiltersChange({ ...filters, ...updates })
+  const activeCount = Number(Boolean(filters.query.trim()))
+    + Number(filters.listIds.length > 0)
+    + Number(filters.status !== 'all')
+    + Number(filters.priority !== 'all')
+    + Number(filters.source !== 'all')
   const today = todayISO()
   const targetDate = day === 'tomorrow' ? addDaysISO(1) : today
   const isTomorrow = day === 'tomorrow'
@@ -96,6 +103,73 @@ export function TodayPage({
 
   return (
     <section className="today-page">
+      <section className="filters-bar today-filters" aria-label={`Filtros de ${isTomorrow ? 'mañana' : 'hoy'}`}>
+        <div className="filters-toolbar">
+          <button
+            aria-controls={filtersPanelId}
+            aria-expanded={filtersOpen}
+            className={`filters-toggle${activeCount ? ' has-active-filters' : ''}`}
+            type="button"
+            onClick={() => setFiltersOpen((current) => !current)}
+          >
+            <Icon name="filter" size={18} />
+            <span>{filtersOpen ? 'Ocultar filtros' : 'Buscar y filtrar'}</span>
+            {activeCount > 0 ? <span className="filters-count">{activeCount}</span> : null}
+            <Icon className="filters-toggle-chevron" name="chevron-down" size={16} />
+          </button>
+        </div>
+        {filtersOpen ? (
+          <div className="today-filters-panel" id={filtersPanelId}>
+            <div className="today-filter-main">
+              <input
+                aria-label={`Buscar en ${isTomorrow ? 'mañana' : 'hoy'}`}
+                placeholder={`Buscar tareas de ${isTomorrow ? 'mañana' : 'hoy'}`}
+                type="search"
+                value={filters.query}
+                onChange={(event) => patch({ query: event.target.value })}
+              />
+              <div className="today-actions">
+                <button className="secondary-button" disabled={activeCount === 0} type="button" onClick={() => onFiltersChange(defaultTodayFilters)}>
+                  Limpiar filtros
+                </button>
+                <button className="primary-button" type="button" onClick={onCreateTodayTask}>
+                  <Icon name="add" />
+                  {isTomorrow ? 'Mañana' : 'Hoy'}
+                </button>
+              </div>
+            </div>
+
+            <div className="today-filter-controls">
+              <ListFilter
+                lists={lists}
+                selectedIds={filters.listIds}
+                onChange={(listIds) => patch({ listIds })}
+              />
+              <select
+                aria-label="Filtrar por estado"
+                value={filters.status}
+                onChange={(event) => patch({ status: event.target.value as TodayFilters['status'] })}
+              >
+                <option value="all">Todos los estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="completed">Completadas</option>
+              </select>
+              <select
+                aria-label="Filtrar por prioridad"
+                value={filters.priority}
+                onChange={(event) => patch({ priority: event.target.value as TodayFilters['priority'] })}
+              >
+                {priorities.map((priority) => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
       <div className="today-summary-grid">
         <div>
           <span>{countTasksOncePerRecurringSeries(pendingTodayTasks)}</span>
@@ -114,55 +188,6 @@ export function TodayPage({
           <p>Completadas {isTomorrow ? 'mañana' : 'hoy'}</p>
         </div>
       </div>
-
-      <section className="today-filters" aria-label={`Filtros de ${isTomorrow ? 'mañana' : 'hoy'}`}>
-        <div className="today-filter-main">
-          <input
-            aria-label={`Buscar en ${isTomorrow ? 'mañana' : 'hoy'}`}
-            placeholder={`Buscar tareas de ${isTomorrow ? 'mañana' : 'hoy'}`}
-            type="search"
-            value={filters.query}
-            onChange={(event) => patch({ query: event.target.value })}
-          />
-          <div className="today-actions">
-            <button className="secondary-button" type="button" onClick={() => onFiltersChange(defaultTodayFilters)}>
-              Limpiar
-            </button>
-            <button className="primary-button" type="button" onClick={onCreateTodayTask}>
-              <Icon name="add" />
-              {isTomorrow ? 'Mañana' : 'Hoy'}
-            </button>
-          </div>
-        </div>
-
-        <div className="today-filter-controls">
-          <ListFilter
-            lists={lists}
-            selectedIds={filters.listIds}
-            onChange={(listIds) => patch({ listIds })}
-          />
-          <select
-            aria-label="Filtrar por estado"
-            value={filters.status}
-            onChange={(event) => patch({ status: event.target.value as TodayFilters['status'] })}
-          >
-            <option value="all">Todos los estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="completed">Completadas</option>
-          </select>
-          <select
-            aria-label="Filtrar por prioridad"
-            value={filters.priority}
-            onChange={(event) => patch({ priority: event.target.value as TodayFilters['priority'] })}
-          >
-            {priorities.map((priority) => (
-              <option key={priority.value} value={priority.value}>
-                {priority.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
 
       <div className="today-content">
         {pendingVisibleTodayTasks.length ? (
