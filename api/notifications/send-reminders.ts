@@ -1,5 +1,6 @@
 import type { Task } from '../../src/types/task.ts'
-import { remindersForTask } from '../../src/utils/reminders.ts'
+// Vercel transpila el módulo compartido a .js dentro de la función.
+import { remindersForTask } from '../../src/utils/reminders.js'
 import webpush from 'web-push'
 
 type VercelRequest = { method?: string; headers?: Record<string, string | string[] | undefined> }

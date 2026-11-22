@@ -21,6 +21,7 @@ import { useLists } from './hooks/useLists'
 import { useNotifications } from './hooks/useNotifications'
 import { useTasks } from './hooks/useTasks'
 import { drainPushNotifications } from './services/notificationInboxService'
+import { getNotificationStatus } from './services/notificationService'
 import { fetchSyncState, saveSyncState, SyncConflictError } from './services/syncApi'
 import type { AppNotification } from './types/notification'
 import type { SyncState, SyncStatus } from './types/sync'
@@ -276,6 +277,20 @@ function App() {
     }
     document.addEventListener('visibilitychange', refreshCloudStateWhenVisible)
     return () => document.removeEventListener('visibilitychange', refreshCloudStateWhenVisible)
+  }, [])
+
+  useEffect(() => {
+    const refreshPushSubscription = () => {
+      if (document.visibilityState !== 'visible') return
+      // La suscripción puede sobrevivir en Safari aunque el servidor haya perdido
+      // su registro. Volver a guardarla también actualiza la zona horaria.
+      void getNotificationStatus().catch(() => {
+        // Ajustes muestra el error y permite reintentar o reconectar manualmente.
+      })
+    }
+    refreshPushSubscription()
+    document.addEventListener('visibilitychange', refreshPushSubscription)
+    return () => document.removeEventListener('visibilitychange', refreshPushSubscription)
   }, [])
 
   useEffect(() => {

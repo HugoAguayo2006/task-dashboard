@@ -11,10 +11,25 @@ export function NotificationStatus() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getNotificationStatus().then(setStatus).catch((caught) => {
-      setError(caught instanceof Error ? caught.message : 'No se pudo verificar este iPhone con el servidor.')
-      setStatus('prompt')
-    })
+    let active = true
+    const refreshStatus = () => {
+      if (document.visibilityState !== 'visible') return
+      getNotificationStatus().then((nextStatus) => {
+        if (!active) return
+        setError('')
+        setStatus(nextStatus)
+      }).catch((caught) => {
+        if (!active) return
+        setError(caught instanceof Error ? caught.message : 'No se pudo verificar este iPhone con el servidor.')
+        setStatus('prompt')
+      })
+    }
+    refreshStatus()
+    document.addEventListener('visibilitychange', refreshStatus)
+    return () => {
+      active = false
+      document.removeEventListener('visibilitychange', refreshStatus)
+    }
   }, [])
 
   if (status === 'enabled') {
@@ -55,7 +70,7 @@ export function NotificationStatus() {
     <section className={`notification-status ${status === 'denied' ? 'status-error' : ''}`}>
       <div>
         <strong>{status === 'denied' ? 'Notificaciones bloqueadas' : 'Activa tus recordatorios'}</strong>
-        <small>{error || (status === 'denied' ? 'Permítelas desde Ajustes → Notificaciones → Chalendar.' : 'Recibe alertas aun cuando Chalendar esté cerrado.')}</small>
+        <small>{error || (status === 'denied' ? 'Permítelas desde Ajustes → Notificaciones → Chalendar.' : Notification.permission === 'granted' ? 'La suscripción se perdió. Toca para activarla de nuevo.' : 'Recibe alertas aun cuando Chalendar esté cerrado.')}</small>
       </div>
       {status !== 'denied' && (
         <button

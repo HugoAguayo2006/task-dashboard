@@ -44,6 +44,7 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
   }
   if (!isStandaloneWebApp()) return 'needs-install'
   if (Notification.permission === 'denied') return 'denied'
+  if (Notification.permission !== 'granted') return 'prompt'
 
   const registration = await navigator.serviceWorker.register('/service-worker.js')
   const subscription = await registration.pushManager.getSubscription()

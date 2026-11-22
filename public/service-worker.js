@@ -61,6 +61,24 @@ self.addEventListener('push', (event) => {
   })())
 })
 
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    // Algunos navegadores renuevan la suscripción por sí mismos. Guardar el
+    // endpoint nuevo evita que el servidor siga enviando al anterior.
+    const subscription = event.newSubscription || await self.registration.pushManager.getSubscription()
+    if (!subscription) return
+    const response = await fetch('/api/notifications/subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: subscription.toJSON(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Mexico_City',
+      }),
+    })
+    if (!response.ok) throw new Error('No se pudo actualizar la suscripción push.')
+  })())
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const targetUrl = new URL(event.notification.data?.url || '/hoy', self.location.origin).href
